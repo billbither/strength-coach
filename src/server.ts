@@ -19,17 +19,23 @@ type UserSession = {
   onboarder: Agent;
   history: ChatMsg[];
   onboarding: boolean;
+  scaffolded: Set<string>;
 };
+
+// Onboarding is complete once these files have actually been written — no /done needed.
+const SCAFFOLD_COMPLETE = ["coach-rules.md", "strength-program.md", "records.md"];
 
 const sessions = new Map<string, UserSession>();
 for (const config of loadUsers()) {
-  sessions.set(config.chatId, {
+  const session: UserSession = {
     config,
     coach: makeCoach(config.repo, config.name),
-    onboarder: makeOnboarder(config.repo, config.name),
+    onboarder: makeOnboarder(config.repo, config.name, (file) => session.scaffolded.add(file)),
     history: [],
     onboarding: false,
-  });
+    scaffolded: new Set(),
+  };
+  sessions.set(config.chatId, session);
 }
 console.log(`configured users: ${[...sessions.values()].map((s) => s.config.name).join(", ")}`);
 
@@ -70,6 +76,7 @@ app.post("/telegram/webhook", async (c) => {
 async function handleMessage(s: UserSession, text: string) {
   if (text === "/init") {
     s.onboarding = true;
+    s.scaffolded.clear();
     s.history.length = 0;
     const opening = await s.onboarder.generate(
       "A new user just sent /init. Greet them in one short plain-text message and ask your first interview question.",
@@ -116,6 +123,12 @@ async function handleMessage(s: UserSession, text: string) {
   const reply = result.text?.trim() || "(no reply)";
   remember(s, "assistant", reply);
   await sendTelegram(s.config.chatId, reply);
+
+  if (s.onboarding && SCAFFOLD_COMPLETE.every((f) => s.scaffolded.has(f))) {
+    s.onboarding = false;
+    s.scaffolded.clear();
+    console.log(`onboarding complete for ${s.config.name} — switched to coaching mode`);
+  }
 }
 
 function forEachUser(label: string, fn: (s: UserSession) => Promise<unknown>) {

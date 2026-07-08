@@ -2,8 +2,8 @@ import { Agent } from "@mastra/core/agent";
 import { deepseek } from "@ai-sdk/deepseek";
 import { makeTools } from "./tools.js";
 
-export function makeOnboarder(repo: string, userName: string) {
-  const { readTrainingFile, writeTrainingFile } = makeTools(repo);
+export function makeOnboarder(repo: string, userName: string, onScaffoldWrite?: (file: string) => void) {
+  const { readTrainingFile, writeTrainingFile } = makeTools(repo, onScaffoldWrite);
   return new Agent({
     id: `onboarder-${repo.replace(/\W/g, "-")}`,
     name: `onboarder for ${userName}`,
@@ -50,9 +50,10 @@ THEN SCAFFOLD (use write_training_file for each; read nothing first — these ar
    "not yet logged" rows, and a note that it is derived from workout-log.csv (Epley e1RM for presses/rows).
 Commit messages: "init: <file purpose>".
 
-FINISH: tell them setup is complete and committed, explain in a few plain lines how to use the coach (just describe
-training/snacks/weigh-ins in normal language and they get logged; /brief = morning brief now; /week = volume check;
-/plan = regenerate the forward plan), and ask them to send /done to switch back to coaching mode.`,
+FINISH: tell them setup is complete and committed, and explain in a few plain lines how to use the coach (just
+describe training/snacks/weigh-ins in normal language and they get logged; /brief = morning brief now; /week =
+volume check; /plan = regenerate the forward plan). Coaching mode switches on automatically — their very next
+message goes to their coach.`,
     model: deepseek("deepseek-chat"),
     tools: { readTrainingFile, writeTrainingFile },
   });

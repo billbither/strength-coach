@@ -89,7 +89,7 @@ APP_URL=https://<your-app-name>.fly.dev node scripts/set-webhook.mjs
 
 Message your bot: `/init`
 
-The bot switches into setup mode and interviews you — name, age, height/weight, what you do and enjoy (lifting, running, cycling, classes), which of those you want programmed vs just logged, goals, equipment, injuries, schedule — one question at a time. When it has the picture, it confirms a summary with you, then generates and commits your entire data repo: coaching rulebook, a program matched to your answers across all your activities, empty log files, and a PR board. Send `/done` when it tells you setup is complete.
+The bot switches into setup mode and interviews you — name, age, height/weight, what you do and enjoy (lifting, running, cycling, classes), which of those you want programmed vs just logged, goals, equipment, injuries, schedule — one question at a time. When it has the picture, it confirms a summary with you, then generates and commits your entire data repo: coaching rulebook, equipment and activities files, a program matched to your answers, empty log files, and a PR board. Once the files are written it switches back to coaching mode by itself — your next message goes to your coach.
 
 If the machine restarts mid-interview (rare), just send `/init` again — it starts fresh.
 
@@ -109,8 +109,8 @@ Commands:
 | `/brief` | Send the morning brief now (today's session, exact targets, volume status) |
 | `/week` | Week-to-date volume vs targets |
 | `/plan` | Re-run the deep planner now and get a digest |
-| `/init` | Enter setup mode (re-interview / rebuild data repo files) |
-| `/done` | Exit setup mode |
+| `/init` | Enter setup mode (re-interview / rebuild data repo files); exits by itself once the files are written |
+| `/done` | Abandon setup mode manually (rarely needed — e.g. quitting a half-finished interview) |
 
 Scheduled (all times America/New_York, DST-aware): morning brief 7:00 AM, snack nudge 1:00 PM, nightly re-plan 2:00 AM.
 
