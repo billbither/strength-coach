@@ -21,7 +21,7 @@ The agent code (this repo) and your training data live in **two separate GitHub 
 | `strength-program.md` | Your program: the rotating sessions across all modalities and the progression scheme |
 | `workout-log.csv` | Every workout, one row per exercise |
 | `snacks.csv` | Movement snacks (pull-ups between calls, etc.) |
-| `body.csv` | Weigh-ins and body composition |
+| `body.csv` | Weigh-ins and body composition — a wide schema with muscle mass, skeletal muscle, bone/protein/water mass, visceral fat, BMR, body age, and segmental muscle+fat per arm/leg/trunk |
 | `records.md` | Your PR board |
 | `coach-plan.md` | The forward plan, regenerated nightly |
 
@@ -101,6 +101,13 @@ Just talk to it:
 - *"185.2 this morning, 14.1% body fat"* → logged with computed BMI
 - *"Knocked out 20 pushups between meetings"* → tallied toward your weekly volume
 - *"What should I do tomorrow?"* → answered from the nightly plan and your real history
+- *"I bought 60 lb dumbbells"* → equipment.md updated; future programming uses them
+
+### Smart scale reports
+
+If your scale's app exports a PDF body-composition report (tested with the Oxiline Scale MD Pro), just **send the PDF to the bot** as a file. It extracts everything — weight, body fat %, muscle mass, skeletal muscle, BMR, visceral fat grade, body age, and segmental muscle/fat for each arm, each leg, and trunk — logs one row to `body.csv`, skips duplicates, and replies with a trend read (multi-entry trend, including per-segment muscle changes and left/right imbalance flags — not single-day noise). Workout data and body data live in strictly separate logs; both feed the coaching and the nightly plan.
+
+Photos/screenshots aren't supported (the model is text-only) — send the PDF export instead. Malformed rows can't corrupt the logs: every append is validated against the CSV header before it's committed.
 
 Commands:
 
@@ -145,10 +152,13 @@ The webhook rejects any request without your `WEBHOOK_SECRET` (Telegram sends it
 
 ```
 Telegram ──webhook──▶ Hono server on Fly.io
-                        ├─ coach agent (deepseek-chat) ──┐
-                        ├─ onboarder agent (/init)       ├──▶ GitHub data repo
-                        ├─ cron 7:00 / 13:00  briefs     │    (every log = a commit)
+  (text + PDF docs)     ├─ coach agent (deepseek-chat) ──┐
+                        ├─ onboarder agent (/init)       ├──▶ GitHub data repo (per user)
+                        ├─ PDF → pdftotext → coach       │    (every log = a commit)
+                        ├─ cron 7:00 / 13:00  briefs     │
                         └─ cron 2:00  planner (deepseek-reasoner) ──▶ coach-plan.md
 ```
+
+PDF parsing uses poppler's `pdftotext` (installed in the Docker image).
 
 Replies are plain text by design — Telegram doesn't render markdown, and a stripper in `src/telegram.ts` catches what the model leaks despite instructions (tested: instructions alone aren't enough).
