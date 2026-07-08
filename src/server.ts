@@ -4,6 +4,7 @@ import cron from "node-cron";
 import { coach } from "./agent.js";
 import { sendTelegram } from "./telegram.js";
 import { runBrief } from "./briefs.js";
+import { runNightlyPlanning } from "./planner.js";
 
 const OWNER_CHAT_ID = process.env.TELEGRAM_CHAT_ID!;
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET!;
@@ -46,6 +47,17 @@ async function handleMessage(text: string) {
     await runBrief("snack");
     return;
   }
+  if (text === "/plan") {
+    await sendTelegram(OWNER_CHAT_ID, "Re-planning from your full history (reasoning model — takes a minute)...");
+    await runNightlyPlanning();
+    const summary = await coach.generate(
+      "coach-plan.md was just regenerated. Read it and send me a plain-text digest: next session (every exercise, " +
+        "exact numbers), then one line each for the two sessions after, volume strategy, and watch items.",
+      { maxSteps: 6 },
+    );
+    await sendTelegram(OWNER_CHAT_ID, summary.text?.trim() || "Plan updated — committed to the repo.");
+    return;
+  }
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
   remember("user", text);
   const result = await coach.generate(
@@ -65,6 +77,9 @@ cron.schedule("0 7 * * *", () => runBrief("morning").catch((e) => console.error(
   timezone: "America/New_York",
 });
 cron.schedule("0 13 * * *", () => runBrief("snack").catch((e) => console.error("snack nudge failed:", e)), {
+  timezone: "America/New_York",
+});
+cron.schedule("0 2 * * *", () => runNightlyPlanning().catch((e) => console.error("nightly planning failed:", e)), {
   timezone: "America/New_York",
 });
 

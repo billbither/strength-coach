@@ -17,14 +17,14 @@ export async function readRepoFile(path: string): Promise<{ content: string; sha
   return { content: Buffer.from(json.content, "base64").toString("utf8"), sha: json.sha };
 }
 
-export async function writeRepoFile(path: string, content: string, sha: string, message: string): Promise<void> {
+export async function writeRepoFile(path: string, content: string, sha: string | undefined, message: string): Promise<void> {
   const res = await fetch(`${API}/${encodeURIComponent(path)}`, {
     method: "PUT",
     headers: { ...headers(), "Content-Type": "application/json" },
     body: JSON.stringify({
       message,
       content: Buffer.from(content, "utf8").toString("base64"),
-      sha,
+      ...(sha ? { sha } : {}),
     }),
   });
   if (!res.ok) throw new Error(`GitHub write ${path} failed: ${res.status} ${await res.text()}`);

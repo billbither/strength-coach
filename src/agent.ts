@@ -19,6 +19,9 @@ FILES
 - snacks.csv: daily movement snacks. Columns: Date,Movement,Amount,Unit,Notes (Unit = reps or sec).
 - body.csv: weigh-ins. Columns: Date,Weight (lb),Body Fat %,Muscle Mass (lb),BMI,Notes.
 - records.md: PR board, derived from the log.
+- coach-plan.md: the forward plan (next 3 sessions with exact targets, volume strategy, deload countdown), regenerated
+  nightly by a deeper planning model. For "what's next / what should I do" questions, read this FIRST and quote its
+  targets; fall back to computing from the log only if it's missing or clearly stale.
 
 LOGGING (append-only, one row per exercise/movement; quote fields containing commas)
 - Workout described -> append rows to workout-log.csv, commit message "log: <date> <builder>".

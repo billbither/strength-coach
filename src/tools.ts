@@ -9,6 +9,7 @@ const TRAINING_FILES = [
   "snacks.csv",
   "body.csv",
   "records.md",
+  "coach-plan.md",
 ] as const;
 
 export const readTrainingFile = createTool({
@@ -16,7 +17,8 @@ export const readTrainingFile = createTool({
   description:
     "Read one of the training source-of-truth files from the strength-training GitHub repo. " +
     "strength-program.md = the program; CLAUDE.md = coaching rules; workout-log.csv = full workout history; " +
-    "snacks.csv = movement-snack tally; body.csv = weigh-ins; records.md = PR board.",
+    "snacks.csv = movement-snack tally; body.csv = weigh-ins; records.md = PR board; " +
+    "coach-plan.md = the current forward plan (next sessions with exact targets), regenerated nightly.",
   inputSchema: z.object({
     file: z.enum(TRAINING_FILES),
   }),

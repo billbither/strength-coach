@@ -12,8 +12,9 @@ function todayLine(): string {
 }
 
 const MORNING_PROMPT = () => `Good morning — today is ${todayLine()}. Build my daily check-in brief.
-Read strength-program.md, CLAUDE.md, workout-log.csv, snacks.csv, body.csv and records.md first, then send a short,
-scannable brief (not an essay; strictly plain text — no markdown):
+Read coach-plan.md (the nightly forward plan — your primary source for today's session and targets), plus CLAUDE.md,
+workout-log.csv, snacks.csv, body.csv and records.md, then send a short, scannable brief (not an essay; strictly
+plain text — no markdown):
 
 1. TODAY'S PLAN — from my most recent logged session and the A -> B -> C rotation, which Builder is up next, or is
    today a rest/active-recovery day? If I trained hard yesterday, protect recovery. Flag a deload if I'm at week 5-6.
