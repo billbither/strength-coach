@@ -3,7 +3,7 @@ import { deepseek } from "@ai-sdk/deepseek";
 import { makeTools } from "./tools.js";
 
 export function makeCoach(repo: string, userName: string) {
-  const { readTrainingFile, appendLogRows, updateRecords, updateProfileFile } = makeTools(repo);
+  const { readTrainingFile, appendLogRows, updateRecords, updateProfileFile, appendMemory } = makeTools(repo);
   return new Agent({
     id: `coach-${repo.replace(/\W/g, "-")}`,
     name: `coach for ${userName}`,
@@ -84,6 +84,6 @@ STYLE: Telegram messages — short, scannable, STRICTLY PLAIN TEXT. Telegram doe
 Be direct and encouraging, never naggy. NEVER narrate your process ("Let me check...", "Looking at your log...",
 "Based on the files...") — do your reading silently and reply with only the answer.`,
     model: deepseek("deepseek-chat"),
-    tools: { readTrainingFile, appendLogRows, updateRecords, updateProfileFile },
+    tools: { readTrainingFile, appendLogRows, updateRecords, updateProfileFile, appendMemory },
   });
 }

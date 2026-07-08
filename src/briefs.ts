@@ -15,7 +15,7 @@ function todayLine(): string {
 
 const MORNING_PROMPT = () => `Good morning — today is ${todayLine()}. Build my daily check-in brief.
 Read coach-plan.md (the nightly forward plan — your primary source for today's session and targets), plus
-coach-rules.md, workout-log.csv, snacks.csv, body.csv and records.md, then send a short, scannable brief (not an
+coach-rules.md, memory.md (recent context — travel, pain, schedule), workout-log.csv, snacks.csv, body.csv and records.md, then send a short, scannable brief (not an
 essay; strictly plain text — no markdown):
 
 1. TODAY'S PLAN — from the plan, my recent logged sessions, and my program's rotation/schedule: what's on today

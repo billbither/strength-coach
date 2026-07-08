@@ -23,6 +23,7 @@ export const TRAINING_FILES = [
   "body.csv",
   "records.md",
   "coach-plan.md",
+  "memory.md",
 ] as const;
 
 // Tools are created per user, bound to that user's data repo.
@@ -37,7 +38,8 @@ export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void
       "equipment.md = available equipment and access; activities.md = activities they do/enjoy (cardio favorites, " +
       "classes, sports) and whether each is programmed or just logged; " +
       "workout-log.csv = full training history (lifting, runs, rides, classes); snacks.csv = movement-snack tally; " +
-      "body.csv = weigh-ins; records.md = PR board; coach-plan.md = the forward plan, regenerated nightly.",
+      "body.csv = weigh-ins; records.md = PR board; coach-plan.md = the forward plan, regenerated nightly; " +
+      "memory.md = dated notes of significant context from past conversations.",
     inputSchema: z.object({
       file: z.enum(TRAINING_FILES),
     }),
@@ -110,13 +112,13 @@ export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void
   const updateProfileFile = createTool({
     id: "update_settings_file",
     description:
-      "Overwrite equipment.md, activities.md, strength-program.md or coach-rules.md with updated full content and " +
+      "Overwrite equipment.md, activities.md, memory.md, strength-program.md or coach-rules.md with full content and " +
       "commit+push. Equipment/activities: update freely when the user mentions changes ('bought 60 lb dumbbells'). " +
       "Program/rules: ONLY when the user explicitly asks for a program or rule change, and only AFTER you have " +
       "described the exact change back to them and they confirmed. Always read the current file first, apply the " +
       "minimal change, pass back the complete file.",
     inputSchema: z.object({
-      file: z.enum(["equipment.md", "activities.md", "strength-program.md", "coach-rules.md"]),
+      file: z.enum(["equipment.md", "activities.md", "memory.md", "strength-program.md", "coach-rules.md"]),
       content: z.string().describe("The complete new file content"),
       commitMessage: z.string().describe('e.g. "equipment: add 60 lb dumbbells" or "program: swap split squats for lunges"'),
     }),
@@ -129,6 +131,33 @@ export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void
       }
       await writeRepoFile(repo, file, content, sha, commitMessage);
       return `${file} updated and pushed.`;
+    },
+  });
+
+
+  const appendMemory = createTool({
+    id: "append_memory",
+    description:
+      "Append one dated line to memory.md — durable context worth remembering across conversations: injury signals, " +
+      "schedule constraints, life events affecting training, goals, recurring struggles. NOT for workout data (that " +
+      "goes in the logs) and NOT for standing rules (those go in coach-rules.md). Keep each memory to one line.",
+    inputSchema: z.object({
+      memory: z.string().describe("One line, no leading dash or date — those are added automatically"),
+    }),
+    execute: async ({ memory }) => {
+      let content = "# Memory\n\nDated notes the coach keeps from conversations.\n";
+      let sha: string | undefined;
+      try {
+        const existing = await readRepoFile(repo, "memory.md");
+        content = existing.content;
+        sha = existing.sha;
+      } catch {
+        // first memory creates the file
+      }
+      const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+      const base = content.endsWith("\n") ? content : content + "\n";
+      await writeRepoFile(repo, "memory.md", base + `- ${today}: ${memory.trim()}\n`, sha, `memory: ${today}`);
+      return "Memory saved.";
     },
   });
 
@@ -148,5 +177,5 @@ export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void
     },
   });
 
-  return { readTrainingFile, appendLogRows, writeTrainingFile, updateRecords, updateProfileFile };
+  return { readTrainingFile, appendLogRows, writeTrainingFile, updateRecords, updateProfileFile, appendMemory };
 }

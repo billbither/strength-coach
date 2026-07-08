@@ -46,7 +46,8 @@ THEN SCAFFOLD (use write_training_file for each; read nothing first — these ar
    work, run/ride templates with duration-distance-intensity if endurance is programmed, and class days placed in
    the weekly rhythm. Only use equipment from equipment.md. Include the progression scheme and safety notes.
 5. workout-log.csv, snacks.csv, body.csv — header row only, exactly matching the columns documented in coach-rules.md.
-6. records.md — an empty PR board: main lifts and (if relevant) endurance bests (fastest 5k, longest ride) with
+6. memory.md — just a header: "# Memory" and a line saying these are dated notes the coach keeps from conversations.
+7. records.md — an empty PR board: main lifts and (if relevant) endurance bests (fastest 5k, longest ride) with
    "not yet logged" rows, and a note that it is derived from workout-log.csv (Epley e1RM for presses/rows).
 Commit messages: "init: <file purpose>".
 

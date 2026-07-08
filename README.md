@@ -23,6 +23,7 @@ The agent code (this repo) and your training data live in **two separate GitHub 
 | `snacks.csv` | Movement snacks (pull-ups between calls, etc.) |
 | `body.csv` | Weigh-ins and body composition — a wide schema with muscle mass, skeletal muscle, bone/protein/water mass, visceral fat, BMR, body age, and segmental muscle+fat per arm/leg/trunk |
 | `records.md` | Your PR board |
+| `memory.md` | Dated notes the coach saves from your conversations — travel, pain mentions, goals, life context — and reads back into coaching and nightly planning |
 | `coach-plan.md` | The forward plan, regenerated nightly |
 
 Every log entry is a git commit, so your training history is versioned, diffable, and portable. You don't have to write any of these files yourself — the `/init` command (step 7) interviews you in Telegram and generates all of them.
