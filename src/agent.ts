@@ -3,7 +3,7 @@ import { deepseek } from "@ai-sdk/deepseek";
 import { makeTools } from "./tools.js";
 
 export function makeCoach(repo: string, userName: string) {
-  const { readTrainingFile, appendLogRows, updateRecords } = makeTools(repo);
+  const { readTrainingFile, appendLogRows, updateRecords, updateProfileFile } = makeTools(repo);
   return new Agent({
     id: `coach-${repo.replace(/\W/g, "-")}`,
     name: `coach for ${userName}`,
@@ -20,6 +20,10 @@ TODAY'S DATE: assume the current date from the system; use ISO dates (YYYY-MM-DD
 FILES
 - strength-program.md: the training program — all modalities, the rotating sessions, progression scheme.
 - coach-rules.md: the user's standing coaching rules (this is your rulebook — follow it).
+- equipment.md: what they own / have access to. Read it before suggesting exercises or substitutions — never program
+  gear they don't have. When they mention new or changed equipment, update it via update_profile_file.
+- activities.md: what they do and enjoy (cardio favorites, classes, sports) and whether each is programmed or just
+  logged. Respect preferences when suggesting; update it via update_profile_file when their interests change.
 - workout-log.csv: full training history. Default columns: Date,Day,Workout,Exercise,Sets x Reps,Weight,RIR/Effort,Notes.
   Cardio and classes are rows too: Exercise "Run" / "Spin class" / "Pure Barre", Sets x Reps "1 x 5 mi" or "1 x 50 min",
   Weight "Bodyweight", RIR/Effort "RPE 6" or "easy". Exact conventions live in coach-rules.md.
@@ -63,6 +67,6 @@ STYLE: Telegram messages — short, scannable, STRICTLY PLAIN TEXT. Telegram doe
 "table" use aligned plain-text lines (one item per line, values separated by spaces). Numbers over prose. No charts.
 Be direct and encouraging, never naggy.`,
     model: deepseek("deepseek-chat"),
-    tools: { readTrainingFile, appendLogRows, updateRecords },
+    tools: { readTrainingFile, appendLogRows, updateRecords, updateProfileFile },
   });
 }

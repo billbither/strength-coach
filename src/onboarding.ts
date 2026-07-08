@@ -29,20 +29,24 @@ Gather, in a natural order:
 Confirm your understanding in one short summary message before writing anything, and let them correct it.
 
 THEN SCAFFOLD (use write_training_file for each; read nothing first — these are new files):
-1. coach-rules.md — the coaching rulebook: their profile (include height explicitly for BMI math), which activities
-   are programmed vs just logged, logging conventions (document the exact CSV columns: workout-log.csv =
-   Date,Day,Workout,Exercise,Sets x Reps,Weight,RIR/Effort,Notes — and show how cardio/class rows are written, e.g.
-   Exercise "Run", Sets x Reps "1 x 5 mi", RIR/Effort "RPE 6"; snacks.csv = Date,Movement,Amount,Unit,Notes;
-   body.csv = Date,Weight (lb),Body Fat %,Muscle Mass (lb),BMI,Notes), safety rules derived from their injuries
-   (be conservative and specific), weekly volume/activity targets if they wanted them (rep counts, run mileage,
-   class counts), a deload policy (every 5-6 weeks for over-40s, 6-8 for younger), and progression rules
-   (double progression for strength; ~10%/week volume growth and easy/hard polarization for endurance).
-2. strength-program.md — the full training program matched to their goals/equipment/schedule ACROSS modalities:
+1. coach-rules.md — the coaching rulebook: their profile (include height explicitly for BMI math), logging
+   conventions (document the exact CSV columns: workout-log.csv = Date,Day,Workout,Exercise,Sets x Reps,Weight,
+   RIR/Effort,Notes — and show how cardio/class rows are written, e.g. Exercise "Run", Sets x Reps "1 x 5 mi",
+   RIR/Effort "RPE 6"; snacks.csv = Date,Movement,Amount,Unit,Notes; body.csv = Date,Weight (lb),Body Fat %,
+   Muscle Mass (lb),BMI,Notes), safety rules derived from their injuries (be conservative and specific), weekly
+   volume/activity targets if they wanted them (rep counts, run mileage, class counts), a deload policy (every 5-6
+   weeks for over-40s, 6-8 for younger), and progression rules (double progression for strength; ~10%/week volume
+   growth and easy/hard polarization for endurance).
+2. equipment.md — everything they own or have access to, organized (home gym: bars/plates, dumbbells with exact
+   weights, kettlebells, bands, pull-up bar; cardio gear; gym/studio memberships and what's available there).
+3. activities.md — the activities they do and enjoy, one section each: cardio favorites (run, bike, hike...),
+   classes (barre, yoga, spin...), sports; for each note frequency and PROGRAMMED vs JUST LOGGED.
+4. strength-program.md — the full training program matched to their goals/equipment/schedule ACROSS modalities:
    named rotating sessions with exercise tables (sets x reps and starting-weight guidance) for programmed strength
    work, run/ride templates with duration-distance-intensity if endurance is programmed, and class days placed in
-   the weekly rhythm. Include the progression scheme and safety notes.
-3. workout-log.csv, snacks.csv, body.csv — header row only, exactly matching the columns documented in coach-rules.md.
-4. records.md — an empty PR board: main lifts and (if relevant) endurance bests (fastest 5k, longest ride) with
+   the weekly rhythm. Only use equipment from equipment.md. Include the progression scheme and safety notes.
+5. workout-log.csv, snacks.csv, body.csv — header row only, exactly matching the columns documented in coach-rules.md.
+6. records.md — an empty PR board: main lifts and (if relevant) endurance bests (fastest 5k, longest ride) with
    "not yet logged" rows, and a note that it is derived from workout-log.csv (Epley e1RM for presses/rows).
 Commit messages: "init: <file purpose>".
 

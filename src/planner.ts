@@ -40,6 +40,8 @@ Keep it under ~120 lines. Exact numbers everywhere — this file is what the dai
 const SOURCE_FILES = [
   "strength-program.md",
   "coach-rules.md",
+  "equipment.md",
+  "activities.md",
   "workout-log.csv",
   "snacks.csv",
   "body.csv",
@@ -48,7 +50,13 @@ const SOURCE_FILES = [
 
 export async function runNightlyPlanning(user: UserConfig): Promise<string> {
   const parts = await Promise.all(
-    SOURCE_FILES.map(async (f) => `===== ${f} =====\n${(await readRepoFile(user.repo, f)).content}`),
+    SOURCE_FILES.map(async (f) => {
+      try {
+        return `===== ${f} =====\n${(await readRepoFile(user.repo, f)).content}`;
+      } catch {
+        return `===== ${f} =====\n(file not present in repo)`;
+      }
+    }),
   );
 
   let currentPlan = "(no coach-plan.md yet — this is the first run)";

@@ -5,6 +5,8 @@ import { appendRepoFile, readRepoFile, writeRepoFile } from "./github.js";
 export const TRAINING_FILES = [
   "strength-program.md",
   "coach-rules.md",
+  "equipment.md",
+  "activities.md",
   "workout-log.csv",
   "snacks.csv",
   "body.csv",
@@ -19,6 +21,8 @@ export function makeTools(repo: string) {
     description:
       "Read one of the training source-of-truth files from the user's data repo. " +
       "strength-program.md = the training program (all modalities); coach-rules.md = the coaching rulebook; " +
+      "equipment.md = available equipment and access; activities.md = activities they do/enjoy (cardio favorites, " +
+      "classes, sports) and whether each is programmed or just logged; " +
       "workout-log.csv = full training history (lifting, runs, rides, classes); snacks.csv = movement-snack tally; " +
       "body.csv = weigh-ins; records.md = PR board; coach-plan.md = the forward plan, regenerated nightly.",
     inputSchema: z.object({
@@ -75,6 +79,29 @@ export function makeTools(repo: string) {
     },
   });
 
+  const updateProfileFile = createTool({
+    id: "update_profile_file",
+    description:
+      "Overwrite equipment.md or activities.md with updated full content and commit+push. Use when the user mentions " +
+      "new/changed equipment ('bought 60 lb dumbbells') or activity preferences ('getting into rucking'). " +
+      "Read the current file first, apply the change, pass back the complete file.",
+    inputSchema: z.object({
+      file: z.enum(["equipment.md", "activities.md"]),
+      content: z.string().describe("The complete new file content"),
+      commitMessage: z.string().describe('e.g. "equipment: add 60 lb dumbbells"'),
+    }),
+    execute: async ({ file, content, commitMessage }) => {
+      let sha: string | undefined;
+      try {
+        sha = (await readRepoFile(repo, file)).sha;
+      } catch {
+        // file may not exist yet
+      }
+      await writeRepoFile(repo, file, content, sha, commitMessage);
+      return `${file} updated and pushed.`;
+    },
+  });
+
   const updateRecords = createTool({
     id: "update_records",
     description:
@@ -91,5 +118,5 @@ export function makeTools(repo: string) {
     },
   });
 
-  return { readTrainingFile, appendLogRows, writeTrainingFile, updateRecords };
+  return { readTrainingFile, appendLogRows, writeTrainingFile, updateRecords, updateProfileFile };
 }

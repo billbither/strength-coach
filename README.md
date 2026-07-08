@@ -16,7 +16,9 @@ The agent code (this repo) and your training data live in **two separate GitHub 
 | File | Purpose |
 |---|---|
 | `coach-rules.md` | Your coaching rulebook: profile, injuries and safety rules, logging conventions, volume targets |
-| `strength-program.md` | Your program: the rotating workouts and progression scheme |
+| `equipment.md` | What you own and have access to — the coach never programs gear you don't have; tell it about new purchases and it updates this |
+| `activities.md` | What you do and enjoy (cardio favorites, classes, sports), each marked programmed vs just-logged |
+| `strength-program.md` | Your program: the rotating sessions across all modalities and the progression scheme |
 | `workout-log.csv` | Every workout, one row per exercise |
 | `snacks.csv` | Movement snacks (pull-ups between calls, etc.) |
 | `body.csv` | Weigh-ins and body composition |
