@@ -1,9 +1,21 @@
 const API = () => `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
 
+// DeepSeek leaks markdown despite plain-text instructions (verified in prod 2026-07-08),
+// and Telegram renders it literally — strip it before sending.
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/\*\*(.+?)\*\*/g, "$1")
+    .replace(/__(.+?)__/g, "$1")
+    .replace(/(?<![\w*])\*(?!\s)([^*\n]+?)\*(?![\w*])/g, "$1")
+    .replace(/```[a-z]*\n?/g, "")
+    .replace(/`([^`\n]+)`/g, "$1");
+}
+
 export async function sendTelegram(chatId: string | number, text: string): Promise<void> {
   // Telegram caps messages at 4096 chars; split on paragraph boundaries when needed.
   const chunks: string[] = [];
-  let rest = text;
+  let rest = stripMarkdown(text);
   while (rest.length > 4096) {
     let cut = rest.lastIndexOf("\n", 4096);
     if (cut < 1000) cut = 4096;
