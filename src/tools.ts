@@ -4,7 +4,7 @@ import { appendRepoFile, readRepoFile, writeRepoFile } from "./github.js";
 
 const TRAINING_FILES = [
   "strength-program.md",
-  "CLAUDE.md",
+  "coach-rules.md",
   "workout-log.csv",
   "snacks.csv",
   "body.csv",
@@ -16,7 +16,7 @@ export const readTrainingFile = createTool({
   id: "read_training_file",
   description:
     "Read one of the training source-of-truth files from the strength-training GitHub repo. " +
-    "strength-program.md = the program; CLAUDE.md = coaching rules; workout-log.csv = full workout history; " +
+    "strength-program.md = the program; coach-rules.md = coaching rules; workout-log.csv = full workout history; " +
     "snacks.csv = movement-snack tally; body.csv = weigh-ins; records.md = PR board; " +
     "coach-plan.md = the current forward plan (next sessions with exact targets), regenerated nightly.",
   inputSchema: z.object({
@@ -53,7 +53,7 @@ export const writeTrainingFile = createTool({
   id: "write_training_file",
   description:
     "Create or completely overwrite one of the training files in the data repo and commit+push. " +
-    "Used during onboarding to scaffold a new user's repo (CLAUDE.md, strength-program.md, CSV headers, records.md). " +
+    "Used during onboarding to scaffold a new user's repo (coach-rules.md, strength-program.md, CSV headers, records.md). " +
     "For day-to-day logging use append_log_rows instead — this tool replaces the whole file.",
   inputSchema: z.object({
     file: z.enum(TRAINING_FILES),

@@ -15,7 +15,7 @@ The agent code (this repo) and your training data live in **two separate GitHub 
 
 | File | Purpose |
 |---|---|
-| `CLAUDE.md` | Your coaching rulebook: profile, injuries and safety rules, logging conventions, volume targets |
+| `coach-rules.md` | Your coaching rulebook: profile, injuries and safety rules, logging conventions, volume targets |
 | `strength-program.md` | Your program: the rotating workouts and progression scheme |
 | `workout-log.csv` | Every workout, one row per exercise |
 | `snacks.csv` | Movement snacks (pull-ups between calls, etc.) |

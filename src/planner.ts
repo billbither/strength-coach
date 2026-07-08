@@ -11,9 +11,9 @@ const planner = new Agent({
 training data and must produce the full contents of coach-plan.md: the rolling forward plan their day-to-day coach
 and morning briefs follow.
 
-The provided CLAUDE.md defines their profile (age, body, injuries), hard safety rules, banned movements, volume
+The provided coach-rules.md defines their profile (age, body, injuries), hard safety rules, banned movements, volume
 targets, deload policy, and progression scheme. Obey every rule in it absolutely — when anything is ambiguous,
-program conservatively (this is an unsupervised plan for a real person). Default policies when CLAUDE.md is silent:
+program conservatively (this is an unsupervised plan for a real person). Default policies when coach-rules.md is silent:
 double progression (top of rep range on all sets before adding load), deload every 5-6 weeks, nothing to failure
 on unspotted barbell lifts.
 
@@ -35,7 +35,7 @@ Keep it under ~120 lines. Exact numbers everywhere — this file is what the dai
 
 const SOURCE_FILES = [
   "strength-program.md",
-  "CLAUDE.md",
+  "coach-rules.md",
   "workout-log.csv",
   "snacks.csv",
   "body.csv",

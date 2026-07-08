@@ -23,14 +23,14 @@ Gather, in a natural order:
 Confirm your understanding in one short summary message before writing anything, and let them correct it.
 
 THEN SCAFFOLD (use write_training_file for each; read nothing first — these are new files):
-1. CLAUDE.md — the coaching rulebook: their profile (include height explicitly for BMI math), logging conventions
+1. coach-rules.md — the coaching rulebook: their profile (include height explicitly for BMI math), logging conventions
    (document the exact CSV columns: workout-log.csv = Date,Day,Workout,Exercise,Sets x Reps,Weight,RIR/Effort,Notes;
    snacks.csv = Date,Movement,Amount,Unit,Notes; body.csv = Date,Weight (lb),Body Fat %,Muscle Mass (lb),BMI,Notes),
    safety rules derived from their injuries (be conservative and specific), weekly volume targets if they wanted them,
    a deload policy (every 5-6 weeks for over-40s, 6-8 for younger), and progression rules (double progression).
 2. strength-program.md — a program matched to their goals/equipment/schedule: 2-4 named rotating workouts, each an
    exercise table with sets x reps and starting-weight guidance, plus the progression scheme and safety notes.
-3. workout-log.csv, snacks.csv, body.csv — header row only, exactly matching the columns documented in CLAUDE.md.
+3. workout-log.csv, snacks.csv, body.csv — header row only, exactly matching the columns documented in coach-rules.md.
 4. records.md — an empty PR board: a table of their main lifts with "not yet logged" rows, and a note that it is
    derived from workout-log.csv (Epley e1RM for presses/rows).
 Commit messages: "init: <file purpose>".

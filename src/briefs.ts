@@ -12,7 +12,7 @@ function todayLine(): string {
 }
 
 const MORNING_PROMPT = () => `Good morning — today is ${todayLine()}. Build my daily check-in brief.
-Read coach-plan.md (the nightly forward plan — your primary source for today's session and targets), plus CLAUDE.md,
+Read coach-plan.md (the nightly forward plan — your primary source for today's session and targets), plus coach-rules.md,
 workout-log.csv, snacks.csv, body.csv and records.md, then send a short, scannable brief (not an essay; strictly
 plain text — no markdown):
 
@@ -26,7 +26,7 @@ plain text — no markdown):
 If I haven't weighed in for a while, gently prompt (don't nag). End by reminding me to just message you what I did
 and you'll log it. This is a read-only run: do NOT append or modify any files.`;
 
-const SNACK_PROMPT = () => `It's snack-nudge time on ${todayLine()}. Read CLAUDE.md, snacks.csv and workout-log.csv,
+const SNACK_PROMPT = () => `It's snack-nudge time on ${todayLine()}. Read coach-rules.md, snacks.csv and workout-log.csv,
 compute week-to-date (Mon-Sun) totals from BOTH files: pull-ups vs 100-150/week, push-ups vs 200-300/week, and
 KB swings month-to-date vs 500-1,000/month. Reply in 3-4 lines max: each number vs target with a one-word read,
 then ONE concrete snack to do right now sized to the biggest gap (never to failure). Encouraging, not naggy — if
