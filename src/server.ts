@@ -103,9 +103,11 @@ async function handlePdf(s: UserSession, fileId: string, caption?: string) {
   const prompt =
     `(Today is ${today}.) I'm sending you a document — extracted text below` +
     (caption ? ` (my note: "${caption}")` : "") +
-    `. If it's a body-composition / scale report: extract the metrics and append ONE row to body.csv per my logging ` +
-    `conventions (compute BMI from the height in coach-rules.md; put extra metrics like muscle mass details, BMR, ` +
-    `visceral fat grade, body age in Notes — keep muscle mass in its own column). Then read my body.csv history and ` +
+    `. If it's a body-composition / scale report: extract the metrics and append ONE row to body.csv ONLY — never to ` +
+    `workout-log.csv (body stats and workouts are separate logs). Follow the body.csv format exactly: ` +
+    `Date,Weight (lb),Body Fat %,Muscle Mass (lb),BMI,Notes. Compute BMI from the height in coach-rules.md; if the ` +
+    `report gives fat mass in lb, compute Body Fat % = fat_mass/weight*100; muscle mass in its own column; extra ` +
+    `metrics (BMR, visceral fat grade, body age, water, bone mass) in Notes. Then read my body.csv history and ` +
     `give me a short trend read (multi-entry trend, not single-day noise) focused on muscle mass and body fat. ` +
     `Update records.md body bests if this beats them. If it's some other kind of training document, do the sensible ` +
     `equivalent (log it or summarize it). Reply with a short plain-text summary of what you logged.\n\n` +
