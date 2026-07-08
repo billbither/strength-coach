@@ -136,7 +136,19 @@ flyctl secrets set USERS='[
 ]'
 ```
 
-4. They send `/init` and get interviewed like any new user. Everyone gets their own briefs, nightly plan, history, and PR board; nobody sees anyone else's data in chat.
+4. Kick off their onboarding for them — they never need to type a command. Either they send `/init` themselves, or you trigger it on their behalf:
+
+```bash
+source .env
+curl -X POST "https://<your-app-name>.fly.dev/telegram/webhook" \
+  -H "Content-Type: application/json" \
+  -H "X-Telegram-Bot-Api-Secret-Token: $WEBHOOK_SECRET" \
+  -d '{"message":{"chat":{"id":"<their-chat-id>"},"text":"/init"}}'
+```
+
+The interview starts in their Telegram immediately; when the bot finishes writing their files it switches to coaching mode by itself. Everyone gets their own briefs, nightly plan, history, and PR board; nobody sees anyone else's data in chat.
+
+One caveat: interview progress lives in memory, so don't redeploy the app while someone is mid-interview — if it happens, just re-trigger `/init`.
 
 ## Operations
 
