@@ -34,6 +34,21 @@ export async function sendTelegram(chatId: string | number, text: string): Promi
   }
 }
 
+export async function downloadTelegramFile(fileId: string): Promise<Buffer> {
+  const metaRes = await fetch(`${API()}/getFile`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ file_id: fileId }),
+  });
+  const meta = (await metaRes.json()) as { ok: boolean; result?: { file_path: string } };
+  if (!meta.ok || !meta.result) throw new Error(`Telegram getFile failed: ${JSON.stringify(meta)}`);
+  const fileRes = await fetch(
+    `https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${meta.result.file_path}`,
+  );
+  if (!fileRes.ok) throw new Error(`Telegram file download failed: ${fileRes.status}`);
+  return Buffer.from(await fileRes.arrayBuffer());
+}
+
 export async function setWebhook(url: string, secretToken: string): Promise<unknown> {
   const res = await fetch(`${API()}/setWebhook`, {
     method: "POST",

@@ -4,7 +4,8 @@ import cron from "node-cron";
 import type { Agent } from "@mastra/core/agent";
 import { makeCoach } from "./agent.js";
 import { makeOnboarder } from "./onboarding.js";
-import { sendTelegram } from "./telegram.js";
+import { downloadTelegramFile, sendTelegram } from "./telegram.js";
+import { pdfToText } from "./pdf.js";
 import { runBrief } from "./briefs.js";
 import { runNightlyPlanning } from "./planner.js";
 import { loadUsers, type UserConfig } from "./users.js";
@@ -52,10 +53,17 @@ app.post("/telegram/webhook", async (c) => {
   if (c.req.header("x-telegram-bot-api-secret-token") !== WEBHOOK_SECRET) {
     return c.text("forbidden", 403);
   }
-  const update = await c.req.json<{ message?: { chat: { id: number }; text?: string } }>();
+  const update = await c.req.json<{
+    message?: {
+      chat: { id: number };
+      text?: string;
+      caption?: string;
+      document?: { file_id: string; mime_type?: string; file_name?: string };
+      photo?: { file_id: string }[];
+    };
+  }>();
   const msg = update.message;
-  // Always 200 so Telegram doesn't retry; silently drop non-text messages.
-  if (!msg?.text) return c.json({ ok: true });
+  if (!msg) return c.json({ ok: true }); // always 200 so Telegram doesn't retry
 
   const session = sessions.get(String(msg.chat.id));
   if (!session) {
@@ -64,14 +72,50 @@ app.post("/telegram/webhook", async (c) => {
     return c.json({ ok: true });
   }
 
-  handleMessage(session, msg.text.trim()).catch(async (err) => {
-    console.error(`handleMessage failed for ${session.config.name}:`, err);
+  const work = msg.document?.mime_type === "application/pdf"
+    ? handlePdf(session, msg.document.file_id, msg.caption)
+    : msg.photo?.length
+      ? sendTelegram(
+          session.config.chatId,
+          "I can't read photos yet — but if that's a scale report, export the PDF from the scale app and send that file instead. PDFs I can read and log.",
+        )
+      : msg.text
+        ? handleMessage(session, msg.text.trim())
+        : Promise.resolve();
+
+  work.catch(async (err) => {
+    console.error(`handling failed for ${session.config.name}:`, err);
     await sendTelegram(session.config.chatId, "⚠️ Coach hit an error handling that — try again in a minute.").catch(
       () => {},
     );
   });
   return c.json({ ok: true });
 });
+
+async function handlePdf(s: UserSession, fileId: string, caption?: string) {
+  const pdf = await downloadTelegramFile(fileId);
+  const text = (await pdfToText(pdf)).trim();
+  if (!text) {
+    await sendTelegram(s.config.chatId, "That PDF has no readable text — I couldn't extract anything from it.");
+    return;
+  }
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+  const prompt =
+    `(Today is ${today}.) I'm sending you a document — extracted text below` +
+    (caption ? ` (my note: "${caption}")` : "") +
+    `. If it's a body-composition / scale report: extract the metrics and append ONE row to body.csv per my logging ` +
+    `conventions (compute BMI from the height in coach-rules.md; put extra metrics like muscle mass details, BMR, ` +
+    `visceral fat grade, body age in Notes — keep muscle mass in its own column). Then read my body.csv history and ` +
+    `give me a short trend read (multi-entry trend, not single-day noise) focused on muscle mass and body fat. ` +
+    `Update records.md body bests if this beats them. If it's some other kind of training document, do the sensible ` +
+    `equivalent (log it or summarize it). Reply with a short plain-text summary of what you logged.\n\n` +
+    `--- DOCUMENT TEXT ---\n${text.slice(0, 12000)}`;
+  remember(s, "user", `(sent a PDF document${caption ? `: ${caption}` : ""})`);
+  const result = await s.coach.generate(prompt, { maxSteps: 12 });
+  const reply = result.text?.trim() || "(no reply)";
+  remember(s, "assistant", reply);
+  await sendTelegram(s.config.chatId, reply);
+}
 
 async function handleMessage(s: UserSession, text: string) {
   if (text === "/init") {
