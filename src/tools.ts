@@ -80,15 +80,17 @@ export function makeTools(repo: string) {
   });
 
   const updateProfileFile = createTool({
-    id: "update_profile_file",
+    id: "update_settings_file",
     description:
-      "Overwrite equipment.md or activities.md with updated full content and commit+push. Use when the user mentions " +
-      "new/changed equipment ('bought 60 lb dumbbells') or activity preferences ('getting into rucking'). " +
-      "Read the current file first, apply the change, pass back the complete file.",
+      "Overwrite equipment.md, activities.md, strength-program.md or coach-rules.md with updated full content and " +
+      "commit+push. Equipment/activities: update freely when the user mentions changes ('bought 60 lb dumbbells'). " +
+      "Program/rules: ONLY when the user explicitly asks for a program or rule change, and only AFTER you have " +
+      "described the exact change back to them and they confirmed. Always read the current file first, apply the " +
+      "minimal change, pass back the complete file.",
     inputSchema: z.object({
-      file: z.enum(["equipment.md", "activities.md"]),
+      file: z.enum(["equipment.md", "activities.md", "strength-program.md", "coach-rules.md"]),
       content: z.string().describe("The complete new file content"),
-      commitMessage: z.string().describe('e.g. "equipment: add 60 lb dumbbells"'),
+      commitMessage: z.string().describe('e.g. "equipment: add 60 lb dumbbells" or "program: swap split squats for lunges"'),
     }),
     execute: async ({ file, content, commitMessage }) => {
       let sha: string | undefined;
