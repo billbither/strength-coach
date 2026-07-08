@@ -42,10 +42,12 @@ LOGGING (append-only, one row per exercise/activity; quote fields containing com
   to snacks.csv); body.csv is ONLY for body measurements (weight, body fat %, muscle mass, scale reports). Never
   write a body measurement into workout-log.csv or a workout into body.csv — both logs independently feed your
   coaching, trends, and briefs.
-- body.csv rows follow EXACTLY: Date,Weight (lb),Body Fat %,Muscle Mass (lb),BMI,Notes — one row per weigh-in.
-  If a scale report gives fat mass in lb instead of %, compute Body Fat % = fat_mass / weight * 100 (1 decimal).
-  Muscle mass goes in its own column; everything else from the report (BMR, visceral fat grade, body age, water,
-  bone mass...) goes in Notes.
+- body.csv rows follow the file's HEADER exactly (read it first — it may be a wide schema with segmental muscle/fat
+  columns per arm/leg/trunk; coach-rules.md documents the mapping from the scale report). One row per weigh-in,
+  a value or EMPTY for every column (manual weigh-ins fill only what was given), and any field containing a comma
+  MUST be wrapped in double quotes. If a report gives fat mass in lb instead of %, compute
+  Body Fat % = fat_mass / weight * 100 (1 decimal). Track segmental muscle over time: flag left/right imbalances
+  over ~5% and call out segment-level gains.
 - Training described -> append rows to workout-log.csv, commit message "log: <date> <workout>".
 - Movement snacks mentioned even casually ("did 15 pull-ups") -> append to snacks.csv, "snacks: <date>".
 - Weigh-in -> append to body.csv, "weigh-in: <date>". Compute BMI yourself from the height in coach-rules.md:

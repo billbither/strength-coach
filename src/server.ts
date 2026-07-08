@@ -103,12 +103,14 @@ async function handlePdf(s: UserSession, fileId: string, caption?: string) {
   const prompt =
     `(Today is ${today}.) I'm sending you a document — extracted text below` +
     (caption ? ` (my note: "${caption}")` : "") +
-    `. If it's a body-composition / scale report: extract the metrics and append ONE row to body.csv ONLY — never to ` +
-    `workout-log.csv (body stats and workouts are separate logs). Follow the body.csv format exactly: ` +
-    `Date,Weight (lb),Body Fat %,Muscle Mass (lb),BMI,Notes. Compute BMI from the height in coach-rules.md; if the ` +
-    `report gives fat mass in lb, compute Body Fat % = fat_mass/weight*100; muscle mass in its own column; extra ` +
-    `metrics (BMR, visceral fat grade, body age, water, bone mass) in Notes. Then read my body.csv history and ` +
-    `give me a short trend read (multi-entry trend, not single-day noise) focused on muscle mass and body fat. ` +
+    `. If it's a body-composition / scale report: read body.csv FIRST to get its exact header, then append ONE row ` +
+    `to body.csv ONLY — never to workout-log.csv (body stats and workouts are separate logs). Fill every column the ` +
+    `report provides (including segmental muscle/fat per arm, leg and trunk from the Muscle Balance and Segmental ` +
+    `Fat sections), leave columns the report lacks empty, keep the exact column count, and double-quote any field ` +
+    `containing commas. coach-rules.md documents the full report-to-column mapping. Also check I haven't already ` +
+    `logged a row for the same date+time — if this looks like a duplicate of the latest row, say so and DON'T log ` +
+    `it again. Then read my body.csv history and give me a short trend read (multi-entry trend, not single-day ` +
+    `noise) focused on muscle mass — total and per-segment — and body fat. ` +
     `Update records.md body bests if this beats them. If it's some other kind of training document, do the sensible ` +
     `equivalent (log it or summarize it). Reply with a short plain-text summary of what you logged.\n\n` +
     `--- DOCUMENT TEXT ---\n${text.slice(0, 12000)}`;

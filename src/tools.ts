@@ -1,6 +1,17 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
-import { appendRepoFile, readRepoFile, writeRepoFile } from "./github.js";
+import { readRepoFile, writeRepoFile } from "./github.js";
+
+// Quote-aware CSV field counter — used to reject malformed rows before they corrupt a log.
+function csvFieldCount(row: string): number {
+  let count = 1;
+  let inQuotes = false;
+  for (const ch of row) {
+    if (ch === '"') inQuotes = !inQuotes;
+    else if (ch === "," && !inQuotes) count++;
+  }
+  return count;
+}
 
 export const TRAINING_FILES = [
   "strength-program.md",
@@ -53,7 +64,21 @@ export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void
         .describe('Commit message, e.g. "log: 2026-07-08 Builder C" or "snacks: 2026-07-08" or "weigh-in: 2026-07-08"'),
     }),
     execute: async ({ file, rows, commitMessage }) => {
-      await appendRepoFile(repo, file, rows, commitMessage);
+      const { content, sha } = await readRepoFile(repo, file);
+      const header = content.split("\n")[0];
+      const expected = csvFieldCount(header);
+      for (const row of rows) {
+        const got = csvFieldCount(row);
+        if (got !== expected) {
+          throw new Error(
+            `Row has ${got} fields but the ${file} header has ${expected} columns. ` +
+              `Wrap any field containing a comma in double quotes, and provide a value (or empty) for every column. ` +
+              `Header: ${header}`,
+          );
+        }
+      }
+      const base = content.endsWith("\n") || content.length === 0 ? content : content + "\n";
+      await writeRepoFile(repo, file, base + rows.join("\n") + "\n", sha, commitMessage);
       return `Appended ${rows.length} row(s) to ${file} and pushed.`;
     },
   });
