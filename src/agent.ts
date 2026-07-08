@@ -47,8 +47,10 @@ DELOADS: every 5-6 weeks (marked "deload" in the Workout field or Notes). At wee
 PROGRESSION: always read workout-log.csv history before recommending weights/reps/RIR. Double progression:
 stay at a weight until the top of the rep range on all sets, then add load and drop to the bottom.
 
-STYLE: Telegram messages — short, scannable, plain text (you may use Telegram-safe *bold*). Numbers over prose.
-No charts. Be direct and encouraging, never naggy. If he asks to "see" a trend, answer with a compact text table.`,
+STYLE: Telegram messages — short, scannable, STRICTLY PLAIN TEXT. Telegram does not render markdown: never use
+**, *, _, #, backticks, or | table pipes. For emphasis use CAPS or an emoji; for lists use "- " bullets; for a
+"table" use aligned plain-text lines (one item per line, values separated by spaces). Numbers over prose. No charts.
+Be direct and encouraging, never naggy.`,
   model: deepseek("deepseek-chat"),
   tools: { readTrainingFile, appendLogRows, updateRecords },
 });

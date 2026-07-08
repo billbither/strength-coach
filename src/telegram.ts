@@ -1,9 +1,20 @@
 const API = () => `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
 
+// Telegram renders messages as plain text (no parse_mode) — strip any markdown the model emits anyway.
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/\*\*(.+?)\*\*/g, "$1")
+    .replace(/__(.+?)__/g, "$1")
+    .replace(/(?<![\w*])\*(?!\s)([^*\n]+?)\*(?![\w*])/g, "$1")
+    .replace(/```[a-z]*\n?/g, "")
+    .replace(/`([^`\n]+)`/g, "$1");
+}
+
 export async function sendTelegram(chatId: string | number, text: string): Promise<void> {
   // Telegram caps messages at 4096 chars; split on paragraph boundaries when needed.
   const chunks: string[] = [];
-  let rest = text;
+  let rest = stripMarkdown(text);
   while (rest.length > 4096) {
     let cut = rest.lastIndexOf("\n", 4096);
     if (cut < 1000) cut = 4096;
