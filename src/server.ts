@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import cron from "node-cron";
 import { coach } from "./agent.js";
+import { onboarder } from "./onboarding.js";
 import { sendTelegram } from "./telegram.js";
 import { runBrief } from "./briefs.js";
 import { runNightlyPlanning } from "./planner.js";
@@ -38,7 +39,29 @@ app.post("/telegram/webhook", async (c) => {
   return c.json({ ok: true });
 });
 
+// Onboarding mode: /init flips the conversation to the interviewer agent until /done.
+// In-memory by design — if the machine restarts mid-interview, just send /init again.
+let onboardingMode = false;
+
 async function handleMessage(text: string) {
+  if (text === "/init") {
+    onboardingMode = true;
+    history.length = 0;
+    const opening = await onboarder.generate(
+      "A new user just sent /init. Greet them in one short plain-text message and ask your first interview question.",
+      { maxSteps: 3 },
+    );
+    const msg = opening.text?.trim() || "Let's set you up. First: what's your name and age?";
+    remember("assistant", msg);
+    await sendTelegram(OWNER_CHAT_ID, msg);
+    return;
+  }
+  if (text === "/done") {
+    onboardingMode = false;
+    history.length = 0;
+    await sendTelegram(OWNER_CHAT_ID, "Setup mode off — I'm your coach now. Try /brief for today's plan.");
+    return;
+  }
   if (text === "/brief") {
     await runBrief("morning");
     return;
@@ -59,8 +82,9 @@ async function handleMessage(text: string) {
     return;
   }
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+  const agent = onboardingMode ? onboarder : coach;
   remember("user", text);
-  const result = await coach.generate(
+  const result = await agent.generate(
     [
       ...history.slice(0, -1),
       { role: "user" as const, content: `(Today is ${today}.) ${text}` },

@@ -49,6 +49,29 @@ export const appendLogRows = createTool({
   },
 });
 
+export const writeTrainingFile = createTool({
+  id: "write_training_file",
+  description:
+    "Create or completely overwrite one of the training files in the data repo and commit+push. " +
+    "Used during onboarding to scaffold a new user's repo (CLAUDE.md, strength-program.md, CSV headers, records.md). " +
+    "For day-to-day logging use append_log_rows instead — this tool replaces the whole file.",
+  inputSchema: z.object({
+    file: z.enum(TRAINING_FILES),
+    content: z.string().describe("The complete file content"),
+    commitMessage: z.string().describe('e.g. "init: coaching rules" or "init: program"'),
+  }),
+  execute: async ({ file, content, commitMessage }) => {
+    let sha: string | undefined;
+    try {
+      sha = (await readRepoFile(file)).sha;
+    } catch {
+      // new file
+    }
+    await writeRepoFile(file, content, sha, commitMessage);
+    return `${file} written and pushed.`;
+  },
+});
+
 export const updateRecords = createTool({
   id: "update_records",
   description:
