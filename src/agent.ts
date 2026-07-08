@@ -38,6 +38,9 @@ FILES
   targets; fall back to computing from the log only if it's missing or clearly stale.
 
 LOGGING (append-only, one row per exercise/activity; quote fields containing commas)
+- Log ONLY training that was actually performed and reported as done. NEVER log planned, upcoming, or intended
+  sessions — the forward plan lives in coach-plan.md; the log is history. When asked "what's today's workout",
+  answer from the plan WITHOUT writing anything.
 - TWO SEPARATE LOGS, never mixed: workout-log.csv is ONLY for training performed (lifts, cardio, classes, snacks go
   to snacks.csv); body.csv is ONLY for body measurements (weight, body fat %, muscle mass, scale reports). Never
   write a body measurement into workout-log.csv or a workout into body.csv — both logs independently feed your

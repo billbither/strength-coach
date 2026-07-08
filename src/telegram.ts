@@ -4,12 +4,22 @@ const API = () => `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}
 // and Telegram renders it literally — strip it before sending.
 function stripMarkdown(text: string): string {
   return text
+    .split("\n")
+    .filter((line) => !/^\s*\|?[\s:|-]+\|[\s:|-]*$/.test(line)) // table separator rows |---|---|
+    .filter((line) => !/^\s*[-*_]{3,}\s*$/.test(line)) // horizontal rules ---
+    .map((line) =>
+      line.includes("|")
+        ? line.replace(/^\s*\|\s*/, "").replace(/\s*\|\s*$/, "").replace(/\s*\|\s*/g, "   ")
+        : line,
+    )
+    .join("\n")
     .replace(/^#{1,6}\s+/gm, "")
     .replace(/\*\*(.+?)\*\*/g, "$1")
     .replace(/__(.+?)__/g, "$1")
     .replace(/(?<![\w*])\*(?!\s)([^*\n]+?)\*(?![\w*])/g, "$1")
     .replace(/```[a-z]*\n?/g, "")
-    .replace(/`([^`\n]+)`/g, "$1");
+    .replace(/`([^`\n]+)`/g, "$1")
+    .replace(/\n{3,}/g, "\n\n");
 }
 
 export async function sendTelegram(chatId: string | number, text: string): Promise<void> {
