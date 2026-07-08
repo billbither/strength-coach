@@ -1,21 +1,41 @@
 import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import cron from "node-cron";
-import { coach } from "./agent.js";
-import { onboarder } from "./onboarding.js";
+import type { Agent } from "@mastra/core/agent";
+import { makeCoach } from "./agent.js";
+import { makeOnboarder } from "./onboarding.js";
 import { sendTelegram } from "./telegram.js";
 import { runBrief } from "./briefs.js";
 import { runNightlyPlanning } from "./planner.js";
+import { loadUsers, type UserConfig } from "./users.js";
 
-const OWNER_CHAT_ID = process.env.TELEGRAM_CHAT_ID!;
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET!;
 
-// Short rolling conversation memory so follow-up questions have context.
 type ChatMsg = { role: "user"; content: string } | { role: "assistant"; content: string };
-const history: ChatMsg[] = [];
-function remember(role: ChatMsg["role"], content: string) {
-  history.push({ role, content } as ChatMsg);
-  while (history.length > 20) history.shift();
+
+type UserSession = {
+  config: UserConfig;
+  coach: Agent;
+  onboarder: Agent;
+  history: ChatMsg[];
+  onboarding: boolean;
+};
+
+const sessions = new Map<string, UserSession>();
+for (const config of loadUsers()) {
+  sessions.set(config.chatId, {
+    config,
+    coach: makeCoach(config.repo, config.name),
+    onboarder: makeOnboarder(config.repo, config.name),
+    history: [],
+    onboarding: false,
+  });
+}
+console.log(`configured users: ${[...sessions.values()].map((s) => s.config.name).join(", ")}`);
+
+function remember(s: UserSession, role: ChatMsg["role"], content: string) {
+  s.history.push({ role, content } as ChatMsg);
+  while (s.history.length > 20) s.history.shift();
 }
 
 const app = new Hono();
@@ -28,82 +48,92 @@ app.post("/telegram/webhook", async (c) => {
   }
   const update = await c.req.json<{ message?: { chat: { id: number }; text?: string } }>();
   const msg = update.message;
-  // Always 200 so Telegram doesn't retry; silently drop non-owner and non-text messages.
-  if (!msg?.text || String(msg.chat.id) !== OWNER_CHAT_ID) return c.json({ ok: true });
+  // Always 200 so Telegram doesn't retry; silently drop non-text messages.
+  if (!msg?.text) return c.json({ ok: true });
 
-  const text = msg.text.trim();
-  handleMessage(text).catch(async (err) => {
-    console.error("handleMessage failed:", err);
-    await sendTelegram(OWNER_CHAT_ID, "⚠️ Coach hit an error handling that — try again in a minute.").catch(() => {});
+  const session = sessions.get(String(msg.chat.id));
+  if (!session) {
+    // Log unknown chat ids so adding a new user is easy: their id shows up here when they first message the bot.
+    console.log(`message from unconfigured chat id ${msg.chat.id} — add it to USERS to enable`);
+    return c.json({ ok: true });
+  }
+
+  handleMessage(session, msg.text.trim()).catch(async (err) => {
+    console.error(`handleMessage failed for ${session.config.name}:`, err);
+    await sendTelegram(session.config.chatId, "⚠️ Coach hit an error handling that — try again in a minute.").catch(
+      () => {},
+    );
   });
   return c.json({ ok: true });
 });
 
-// Onboarding mode: /init flips the conversation to the interviewer agent until /done.
-// In-memory by design — if the machine restarts mid-interview, just send /init again.
-let onboardingMode = false;
-
-async function handleMessage(text: string) {
+async function handleMessage(s: UserSession, text: string) {
   if (text === "/init") {
-    onboardingMode = true;
-    history.length = 0;
-    const opening = await onboarder.generate(
+    s.onboarding = true;
+    s.history.length = 0;
+    const opening = await s.onboarder.generate(
       "A new user just sent /init. Greet them in one short plain-text message and ask your first interview question.",
       { maxSteps: 3 },
     );
     const msg = opening.text?.trim() || "Let's set you up. First: what's your name and age?";
-    remember("assistant", msg);
-    await sendTelegram(OWNER_CHAT_ID, msg);
+    remember(s, "assistant", msg);
+    await sendTelegram(s.config.chatId, msg);
     return;
   }
   if (text === "/done") {
-    onboardingMode = false;
-    history.length = 0;
-    await sendTelegram(OWNER_CHAT_ID, "Setup mode off — I'm your coach now. Try /brief for today's plan.");
+    s.onboarding = false;
+    s.history.length = 0;
+    await sendTelegram(s.config.chatId, "Setup mode off — I'm your coach now. Try /brief for today's plan.");
     return;
   }
   if (text === "/brief") {
-    await runBrief("morning");
+    await runBrief("morning", s.config, s.coach);
     return;
   }
   if (text === "/week") {
-    await runBrief("snack");
+    await runBrief("snack", s.config, s.coach);
     return;
   }
   if (text === "/plan") {
-    await sendTelegram(OWNER_CHAT_ID, "Re-planning from your full history (reasoning model — takes a minute)...");
-    await runNightlyPlanning();
-    const summary = await coach.generate(
-      "coach-plan.md was just regenerated. Read it and send me a plain-text digest: next session (every exercise, " +
+    await sendTelegram(s.config.chatId, "Re-planning from your full history (reasoning model — takes a minute)...");
+    await runNightlyPlanning(s.config);
+    const summary = await s.coach.generate(
+      "coach-plan.md was just regenerated. Read it and send me a plain-text digest: next session (every exercise/effort, " +
         "exact numbers), then one line each for the two sessions after, volume strategy, and watch items.",
       { maxSteps: 6 },
     );
-    await sendTelegram(OWNER_CHAT_ID, summary.text?.trim() || "Plan updated — committed to the repo.");
+    await sendTelegram(s.config.chatId, summary.text?.trim() || "Plan updated — committed to the repo.");
     return;
   }
+
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
-  const agent = onboardingMode ? onboarder : coach;
-  remember("user", text);
+  const agent = s.onboarding ? s.onboarder : s.coach;
+  remember(s, "user", text);
   const result = await agent.generate(
-    [
-      ...history.slice(0, -1),
-      { role: "user" as const, content: `(Today is ${today}.) ${text}` },
-    ],
+    [...s.history.slice(0, -1), { role: "user" as const, content: `(Today is ${today}.) ${text}` }],
     { maxSteps: 12 },
   );
   const reply = result.text?.trim() || "(no reply)";
-  remember("assistant", reply);
-  await sendTelegram(OWNER_CHAT_ID, reply);
+  remember(s, "assistant", reply);
+  await sendTelegram(s.config.chatId, reply);
 }
 
-// Daily briefs — timezone-aware (handles DST, unlike fixed-UTC cron).
-cron.schedule("0 7 * * *", () => runBrief("morning").catch((e) => console.error("morning brief failed:", e)), {
+function forEachUser(label: string, fn: (s: UserSession) => Promise<unknown>) {
+  return () => {
+    for (const s of sessions.values()) {
+      fn(s).catch((e) => console.error(`${label} failed for ${s.config.name}:`, e));
+    }
+  };
+}
+
+// Daily schedules — timezone-aware (handles DST, unlike fixed-UTC cron).
+cron.schedule("0 7 * * *", forEachUser("morning brief", (s) => runBrief("morning", s.config, s.coach)), {
   timezone: "America/New_York",
 });
-cron.schedule("0 13 * * *", () => runBrief("snack").catch((e) => console.error("snack nudge failed:", e)), {
+cron.schedule("0 13 * * *", forEachUser("snack nudge", (s) => runBrief("snack", s.config, s.coach)), {
   timezone: "America/New_York",
 });
-cron.schedule("0 2 * * *", () => runNightlyPlanning().catch((e) => console.error("nightly planning failed:", e)), {
+cron.schedule("0 2 * * *", forEachUser("nightly planning", (s) => runNightlyPlanning(s.config)), {
   timezone: "America/New_York",
 });
 

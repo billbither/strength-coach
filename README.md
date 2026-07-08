@@ -1,6 +1,6 @@
 # Strength Coach
 
-A personal strength-training coach that lives in Telegram. You text it like a human coach: describe a workout and it logs it, ask what's next and it answers from your actual history, step on the scale and tell it the number. Behind the scenes it's a [Mastra](https://mastra.ai) agent running on Fly.io, powered by two DeepSeek models, with all of your data stored as plain files in a GitHub repo you own.
+A personal training coach that lives in Telegram — strength work, running, cycling, classes (barre, yoga, spin...), whatever you actually do. You text it like a human coach: describe a workout and it logs it, ask what's next and it answers from your actual history, step on the scale and tell it the number. Behind the scenes it's a [Mastra](https://mastra.ai) agent running on Fly.io, powered by two DeepSeek models, with all of your data stored as plain files in a GitHub repo you own. One deployment can coach multiple people (see Households below) — each with their own bot conversation, data repo, plan, and briefs.
 
 Two brains:
 
@@ -87,7 +87,7 @@ APP_URL=https://<your-app-name>.fly.dev node scripts/set-webhook.mjs
 
 Message your bot: `/init`
 
-The bot switches into setup mode and interviews you — name, age, height/weight, goals, equipment, injuries, schedule, likes/dislikes — one question at a time. When it has the picture, it confirms a summary with you, then generates and commits your entire data repo: coaching rulebook, a program matched to your answers, empty log files, and a PR board. Send `/done` when it tells you setup is complete.
+The bot switches into setup mode and interviews you — name, age, height/weight, what you do and enjoy (lifting, running, cycling, classes), which of those you want programmed vs just logged, goals, equipment, injuries, schedule — one question at a time. When it has the picture, it confirms a summary with you, then generates and commits your entire data repo: coaching rulebook, a program matched to your answers across all your activities, empty log files, and a PR board. Send `/done` when it tells you setup is complete.
 
 If the machine restarts mid-interview (rare), just send `/init` again — it starts fresh.
 
@@ -111,6 +111,23 @@ Commands:
 | `/done` | Exit setup mode |
 
 Scheduled (all times America/New_York, DST-aware): morning brief 7:00 AM, snack nudge 1:00 PM, nightly re-plan 2:00 AM.
+
+## Households: multiple people, one deployment
+
+One bot and one Fly machine can coach several people. Each person needs their own **data repo** (create it empty, like step 2) and their own Telegram **chat id** — but they share the bot, the machine, and the DeepSeek key.
+
+1. Have the new person open the bot and send it any message. Their chat id appears in the app logs: `flyctl logs` → "message from unconfigured chat id 123456789".
+2. Make sure your `GITHUB_TOKEN` has access to their data repo too (edit the token's repository list on GitHub), or that their repo is under the same account.
+3. Set the `USERS` secret (replaces the single-user vars):
+
+```bash
+flyctl secrets set USERS='[
+  {"chatId":"111111111","repo":"you/your-training","name":"You"},
+  {"chatId":"222222222","repo":"you/partner-training","name":"Partner"}
+]'
+```
+
+4. They send `/init` and get interviewed like any new user. Everyone gets their own briefs, nightly plan, history, and PR board; nobody sees anyone else's data in chat.
 
 ## Operations
 

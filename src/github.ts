@@ -1,6 +1,3 @@
-const REPO = process.env.GITHUB_REPO ?? "billbither/strength-training";
-const API = `https://api.github.com/repos/${REPO}/contents`;
-
 function headers() {
   return {
     Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
@@ -10,15 +7,23 @@ function headers() {
   };
 }
 
-export async function readRepoFile(path: string): Promise<{ content: string; sha: string }> {
-  const res = await fetch(`${API}/${encodeURIComponent(path)}`, { headers: headers() });
-  if (!res.ok) throw new Error(`GitHub read ${path} failed: ${res.status} ${await res.text()}`);
+const api = (repo: string, path: string) => `https://api.github.com/repos/${repo}/contents/${encodeURIComponent(path)}`;
+
+export async function readRepoFile(repo: string, path: string): Promise<{ content: string; sha: string }> {
+  const res = await fetch(api(repo, path), { headers: headers() });
+  if (!res.ok) throw new Error(`GitHub read ${repo}/${path} failed: ${res.status} ${await res.text()}`);
   const json = (await res.json()) as { content: string; sha: string };
   return { content: Buffer.from(json.content, "base64").toString("utf8"), sha: json.sha };
 }
 
-export async function writeRepoFile(path: string, content: string, sha: string | undefined, message: string): Promise<void> {
-  const res = await fetch(`${API}/${encodeURIComponent(path)}`, {
+export async function writeRepoFile(
+  repo: string,
+  path: string,
+  content: string,
+  sha: string | undefined,
+  message: string,
+): Promise<void> {
+  const res = await fetch(api(repo, path), {
     method: "PUT",
     headers: { ...headers(), "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -27,11 +32,11 @@ export async function writeRepoFile(path: string, content: string, sha: string |
       ...(sha ? { sha } : {}),
     }),
   });
-  if (!res.ok) throw new Error(`GitHub write ${path} failed: ${res.status} ${await res.text()}`);
+  if (!res.ok) throw new Error(`GitHub write ${repo}/${path} failed: ${res.status} ${await res.text()}`);
 }
 
-export async function appendRepoFile(path: string, lines: string[], message: string): Promise<void> {
-  const { content, sha } = await readRepoFile(path);
+export async function appendRepoFile(repo: string, path: string, lines: string[], message: string): Promise<void> {
+  const { content, sha } = await readRepoFile(repo, path);
   const base = content.endsWith("\n") || content.length === 0 ? content : content + "\n";
-  await writeRepoFile(path, base + lines.join("\n") + "\n", sha, message);
+  await writeRepoFile(repo, path, base + lines.join("\n") + "\n", sha, message);
 }
