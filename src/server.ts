@@ -6,6 +6,7 @@ import { makeCoach } from "./agent.js";
 import { makeOnboarder } from "./onboarding.js";
 import { downloadTelegramFile, sendTelegram } from "./telegram.js";
 import { pdfToText } from "./pdf.js";
+import { finalText } from "./text.js";
 import { runBrief } from "./briefs.js";
 import { runNightlyPlanning } from "./planner.js";
 import { loadUsers, type UserConfig } from "./users.js";
@@ -116,7 +117,7 @@ async function handlePdf(s: UserSession, fileId: string, caption?: string) {
     `--- DOCUMENT TEXT ---\n${text.slice(0, 12000)}`;
   remember(s, "user", `(sent a PDF document${caption ? `: ${caption}` : ""})`);
   const result = await s.coach.generate(prompt, { maxSteps: 12 });
-  const reply = result.text?.trim() || "(no reply)";
+  const reply = finalText(result);
   remember(s, "assistant", reply);
   await sendTelegram(s.config.chatId, reply);
 }
@@ -130,7 +131,7 @@ async function handleMessage(s: UserSession, text: string) {
       "A new user just sent /init. Greet them in one short plain-text message and ask your first interview question.",
       { maxSteps: 3 },
     );
-    const msg = opening.text?.trim() || "Let's set you up. First: what's your name and age?";
+    const msg = finalText(opening, "Let's set you up. First: what's your name and age?");
     remember(s, "assistant", msg);
     await sendTelegram(s.config.chatId, msg);
     return;
@@ -157,7 +158,7 @@ async function handleMessage(s: UserSession, text: string) {
         "exact numbers), then one line each for the two sessions after, volume strategy, and watch items.",
       { maxSteps: 6 },
     );
-    await sendTelegram(s.config.chatId, summary.text?.trim() || "Plan updated — committed to the repo.");
+    await sendTelegram(s.config.chatId, finalText(summary, "Plan updated — committed to the repo."));
     return;
   }
 
@@ -168,7 +169,7 @@ async function handleMessage(s: UserSession, text: string) {
     [...s.history.slice(0, -1), { role: "user" as const, content: `(Today is ${today}.) ${text}` }],
     { maxSteps: 12 },
   );
-  const reply = result.text?.trim() || "(no reply)";
+  const reply = finalText(result);
   remember(s, "assistant", reply);
   await sendTelegram(s.config.chatId, reply);
 

@@ -78,7 +78,8 @@ polarization.
 STYLE: Telegram messages — short, scannable, STRICTLY PLAIN TEXT. Telegram does not render markdown: never use
 **, *, _, #, backticks, or | table pipes. For emphasis use CAPS or an emoji; for lists use "- " bullets; for a
 "table" use aligned plain-text lines (one item per line, values separated by spaces). Numbers over prose. No charts.
-Be direct and encouraging, never naggy.`,
+Be direct and encouraging, never naggy. NEVER narrate your process ("Let me check...", "Looking at your log...",
+"Based on the files...") — do your reading silently and reply with only the answer.`,
     model: deepseek("deepseek-chat"),
     tools: { readTrainingFile, appendLogRows, updateRecords, updateProfileFile },
   });

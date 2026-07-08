@@ -1,5 +1,6 @@
 import type { Agent } from "@mastra/core/agent";
 import { sendTelegram } from "./telegram.js";
+import { finalText } from "./text.js";
 import type { UserConfig } from "./users.js";
 
 function todayLine(): string {
@@ -26,7 +27,9 @@ essay; strictly plain text — no markdown):
 4. WEEKLY VOLUME — one-line week-to-date read of whatever targets coach-rules.md defines (rep volume, mileage,
    classes). If today is Sunday, give the full weekly roll-up plus a body-composition trend from body.csv instead.
 If I haven't weighed in for a while, gently prompt (don't nag). End by reminding me to just message you what I did
-and you'll log it. This is a read-only run: do NOT append or modify any files.`;
+and you'll log it. This is a read-only run: do NOT append or modify any files.
+LENGTH AND TONE: 15 lines maximum. No preamble, no narration of what you're reading or thinking — start directly
+with section 1. Numbers, not sentences, wherever possible.`;
 
 const SNACK_PROMPT = () => `It's snack-nudge time on ${todayLine()}. Read coach-rules.md, snacks.csv and
 workout-log.csv, and compute week-to-date (Mon-Sun) totals from BOTH files for whatever weekly/monthly targets
@@ -39,7 +42,7 @@ that I can just message you what I did and it gets logged. Read-only run: do NOT
 export async function runBrief(kind: "morning" | "snack", user: UserConfig, coach: Agent): Promise<string> {
   const prompt = kind === "morning" ? MORNING_PROMPT() : SNACK_PROMPT();
   const result = await coach.generate(prompt, { maxSteps: 12 });
-  const text = result.text?.trim() || "(coach produced no text)";
+  const text = finalText(result, "(coach produced no text)");
   await sendTelegram(user.chatId, text);
   return text;
 }
