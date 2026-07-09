@@ -10,6 +10,8 @@ import { finalText } from "./text.js";
 import { runBrief } from "./briefs.js";
 import { runNightlyPlanning } from "./planner.js";
 import { loadUsers, type UserConfig } from "./users.js";
+import { renderDashboard } from "./dashboard.js";
+import { createHash } from "node:crypto";
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET!;
 
@@ -49,6 +51,23 @@ function remember(s: UserSession, role: ChatMsg["role"], content: string) {
 const app = new Hono();
 
 app.get("/health", (c) => c.text("ok"));
+
+// Per-user dashboard behind an unguessable token (derived, so no new secrets to manage).
+function dashboardToken(chatId: string): string {
+  return createHash("sha256").update(`${WEBHOOK_SECRET}:dashboard:${chatId}`).digest("hex").slice(0, 20);
+}
+
+app.get("/dashboard/:token", async (c) => {
+  const token = c.req.param("token");
+  const session = [...sessions.values()].find((s) => dashboardToken(s.config.chatId) === token);
+  if (!session) return c.text("not found", 404);
+  try {
+    return c.html(await renderDashboard(session.config));
+  } catch (err) {
+    console.error(`dashboard render failed for ${session.config.name}:`, err);
+    return c.text("dashboard error — check logs", 500);
+  }
+});
 
 app.post("/telegram/webhook", async (c) => {
   if (c.req.header("x-telegram-bot-api-secret-token") !== WEBHOOK_SECRET) {
