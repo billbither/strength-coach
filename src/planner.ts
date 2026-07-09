@@ -29,7 +29,8 @@ Output format: ONLY the complete markdown content of coach-plan.md — no preamb
 document. Structure it as:
 # Coach Plan (updated YYYY-MM-DD)
 ## Where you are  (rotation state, weeks since deload, one-paragraph read of the last 2 weeks)
-## Next 3 sessions  (each session: every exercise/effort with exact sets x reps x weight or distance/duration/intensity, RIR/RPE, ordering notes)
+## This week, day by day  (a one-line calendar: every day from today through ~7 days out, each marked REST or the session name — schedule rest days EXPLICITLY, never train more than 2 days in a row, and always make the day after 3 recent sessions a rest day)
+## Next 3 sessions  (each session: every exercise/effort with exact sets x reps x weight or distance/duration/intensity, RIR/RPE, ordering notes; date each session to match the calendar above)
 ## This week's volume strategy  (what to snack / run / attend and roughly when, to hit the targets)
 ## Watch items  (specific, evidence-based: e.g. grip fatigue ordering, joint monitoring, stalled lifts, mileage ramps)
 ## Deload countdown  (weeks until due; what the deload week will look like when it arrives)
