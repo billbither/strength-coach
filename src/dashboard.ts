@@ -1,3 +1,4 @@
+import { marked } from "marked";
 import { readRepoFile } from "./github.js";
 import type { UserConfig } from "./users.js";
 
@@ -133,22 +134,6 @@ function barChart(items: { label: string; value: number; tip?: string }[], color
   return `<svg viewBox="0 0 ${W} ${H}" role="img">${bars}</svg>`;
 }
 
-function mdTableToHtml(md: string): string {
-  const lines = md.split("\n").filter((l) => l.trim().startsWith("|"));
-  if (lines.length < 2) return "";
-  const cells = (l: string) =>
-    l
-      .replace(/^\s*\|/, "")
-      .replace(/\|\s*$/, "")
-      .split("|")
-      .map((c) => esc(c.trim().replace(/\*\*|__|_/g, "")));
-  const head = cells(lines[0]);
-  const body = lines.slice(2).map(cells);
-  return `<table><thead><tr>${head.map((h) => `<th>${h}</th>`).join("")}</tr></thead><tbody>${body
-    .map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join("")}</tr>`)
-    .join("")}</tbody></table>`;
-}
-
 // ---------- page assembly ----------
 
 async function tryRead(repo: string, file: string): Promise<string> {
@@ -271,11 +256,8 @@ export async function renderDashboard(user: UserConfig): Promise<string> {
     )
     .join("");
 
-  // plan: next-sessions section
-  const planSection = (() => {
-    const m = plan.match(/## Next 3 sessions[\s\S]*?(?=\n## |$)/);
-    return m ? m[0] : plan.slice(0, 1500);
-  })();
+  const planHtml = plan ? await marked.parse(plan) : '<p class="muted">No plan yet.</p>';
+  const recordsHtml = records ? await marked.parse(records) : '<p class="muted">No records yet.</p>';
 
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(user.name)} — Training Dashboard</title>
@@ -295,7 +277,10 @@ svg .grid{stroke:var(--line);stroke-width:1}svg .axis{fill:var(--muted);font-siz
 table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;color:var(--text2);font-weight:600;border-bottom:1px solid var(--line);padding:6px 8px}
 td{border-bottom:1px solid var(--line);padding:6px 8px}
 pre{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;white-space:pre-wrap;font-size:12.5px;line-height:1.45;overflow-x:auto}
-.muted{color:var(--muted)}#tip{position:fixed;display:none;background:var(--text);color:var(--surface);font-size:12px;padding:4px 9px;border-radius:6px;pointer-events:none;z-index:9}
+.muted{color:var(--muted)}
+.md h1{font-size:17px;margin:4px 0 10px}.md h2{font-size:15px;margin:18px 0 8px}.md h3{font-size:13.5px;margin:14px 0 6px;color:var(--text2)}
+.md p,.md li{font-size:13.5px;color:var(--text)}.md ul{padding-left:20px;margin:6px 0}.md table{margin:8px 0}.md hr{border:none;border-top:1px solid var(--line);margin:14px 0}
+.md strong{font-weight:600}.md code{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:0 4px;font-size:12.5px}#tip{position:fixed;display:none;background:var(--text);color:var(--surface);font-size:12px;padding:4px 9px;border-radius:6px;pointer-events:none;z-index:9}
 </style></head><body><div class="wrap">
 <h1>${esc(user.name)} — Training Dashboard</h1>
 <div class="sub">Live from ${esc(user.repo)} · generated ${new Date().toLocaleString("en-US", { timeZone: "America/New_York" })} ET</div>
@@ -312,9 +297,9 @@ pre{background:var(--card);border:1px solid var(--line);border-radius:10px;paddi
 <h2>Recent sessions</h2>
 <div class="card" style="overflow-x:auto"><table><thead><tr><th>Date</th><th>Workout</th><th>Exercise</th><th>Sets×Reps</th><th>Weight</th><th>Effort</th></tr></thead><tbody>${recent}</tbody></table></div>
 <h2>PR board</h2>
-<div class="card" style="overflow-x:auto">${mdTableToHtml(records) || '<p class="muted">No records yet.</p>'}</div>
-<h2>Current plan — next sessions</h2>
-<pre>${esc(planSection)}</pre>
+<div class="card md" style="overflow-x:auto">${recordsHtml}</div>
+<h2>Current plan</h2>
+<div class="card md" style="overflow-x:auto">${planHtml}</div>
 </div>
 <div id="tip"></div>
 <script>
