@@ -54,8 +54,9 @@ export async function runWeeklyReview(user: UserConfig): Promise<string> {
   );
 
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+  const weekday = new Date().toLocaleDateString("en-US", { timeZone: "America/New_York", weekday: "long" });
   const result = await reviewer.generate(
-    `Today is Sunday ${today}. Write this week's letter for ${user.name}.\n\n${parts.join("\n\n")}`,
+    `Today is ${weekday} ${today}. Write this week's letter for ${user.name}.\n\n${parts.join("\n\n")}`,
     { maxSteps: 1 },
   );
   const letter = result.text?.trim();
