@@ -9,6 +9,7 @@ import { pdfToText } from "./pdf.js";
 import { finalText } from "./text.js";
 import { runBrief } from "./briefs.js";
 import { runNightlyPlanning } from "./planner.js";
+import { runWeeklyReview } from "./weekly.js";
 import { loadUsers, type UserConfig } from "./users.js";
 import { renderDashboard } from "./dashboard.js";
 import { createHash } from "node:crypto";
@@ -180,6 +181,11 @@ async function handleMessage(s: UserSession, text: string) {
     await sendTelegram(s.config.chatId, `Your live dashboard: ${APP_URL}/dashboard/${dashboardToken(s.config.chatId)}`);
     return;
   }
+  if (text === "/letter") {
+    await sendTelegram(s.config.chatId, "Writing your weekly review (reasoning model — takes a minute)...");
+    await runWeeklyReview(s.config);
+    return;
+  }
   if (text === "/brief") {
     await runBrief("morning", s.config, s.coach);
     return;
@@ -234,6 +240,9 @@ cron.schedule("0 13 * * *", forEachUser("snack nudge", (s) => runBrief("snack", 
   timezone: "America/New_York",
 });
 cron.schedule("0 2 * * *", forEachUser("nightly planning", (s) => runNightlyPlanning(s.config)), {
+  timezone: "America/New_York",
+});
+cron.schedule("0 18 * * 0", forEachUser("weekly review", (s) => runWeeklyReview(s.config)), {
   timezone: "America/New_York",
 });
 

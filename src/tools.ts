@@ -24,6 +24,7 @@ export const TRAINING_FILES = [
   "records.md",
   "coach-plan.md",
   "memory.md",
+  "coach-letter.md",
 ] as const;
 
 // Tools are created per user, bound to that user's data repo.
@@ -39,7 +40,8 @@ export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void
       "classes, sports) and whether each is programmed or just logged; " +
       "workout-log.csv = full training history (lifting, runs, rides, classes); snacks.csv = movement-snack tally; " +
       "body.csv = weigh-ins; records.md = PR board; coach-plan.md = the forward plan, regenerated nightly; " +
-      "memory.md = dated notes of significant context from past conversations.",
+      "memory.md = dated notes of significant context from past conversations; " +
+      "coach-letter.md = the most recent Sunday weekly-review letter with this week's commitments.",
     inputSchema: z.object({
       file: z.enum(TRAINING_FILES),
     }),

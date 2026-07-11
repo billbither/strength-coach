@@ -25,6 +25,8 @@ Gather, in a natural order:
 - injuries, pain, surgeries, or movements a doctor/physio has restricted — dig one level deeper on anything they mention
 - how many days per week and how long per session they can realistically train, and which days classes happen
 - whether they want daily brief messages and movement-snack / weekly-activity targets
+- what coaching voice they want: direct-and-demanding, balanced, or gentle-encouraging — and write a matching
+  "## Coaching voice" section into coach-rules.md describing exactly how their coach should speak to them
 
 Confirm your understanding in one short summary message before writing anything, and let them correct it.
 

@@ -118,10 +118,11 @@ Commands:
 | `/week` | Week-to-date volume vs targets |
 | `/plan` | Re-run the deep planner now and get a digest |
 | `/dashboard` | Send your live dashboard link |
+| `/letter` | Get your weekly coach's review now (also arrives automatically Sunday 6 PM) |
 | `/init` | Enter setup mode (re-interview / rebuild data repo files); exits by itself once the files are written |
 | `/done` | Abandon setup mode manually (rarely needed — e.g. quitting a half-finished interview) |
 
-Scheduled (all times America/New_York, DST-aware): morning brief 7:00 AM, snack nudge 1:00 PM, nightly re-plan 2:00 AM.
+Scheduled (all times America/New_York, DST-aware): morning brief 7:00 AM, snack nudge 1:00 PM, nightly re-plan 2:00 AM, weekly coach's letter Sunday 6:00 PM (accountability review in your chosen coaching voice — set per user in coach-rules.md).
 
 ## Households: multiple people, one deployment
 
