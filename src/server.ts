@@ -63,6 +63,7 @@ app.get("/dashboard/:token", async (c) => {
   const session = [...sessions.values()].find((s) => dashboardToken(s.config.chatId) === token);
   if (!session) return c.text("not found", 404);
   try {
+    c.header("Cache-Control", "no-store, must-revalidate");
     return c.html(await renderDashboard(session.config));
   } catch (err) {
     console.error(`dashboard render failed for ${session.config.name}:`, err);
