@@ -14,6 +14,7 @@ import { renderDashboard } from "./dashboard.js";
 import { createHash } from "node:crypto";
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET!;
+const APP_URL = process.env.APP_URL ?? (process.env.FLY_APP_NAME ? `https://${process.env.FLY_APP_NAME}.fly.dev` : "http://localhost:8080");
 
 type ChatMsg = { role: "user"; content: string } | { role: "assistant"; content: string };
 
@@ -33,7 +34,7 @@ const sessions = new Map<string, UserSession>();
 for (const config of loadUsers()) {
   const session: UserSession = {
     config,
-    coach: makeCoach(config.repo, config.name),
+    coach: makeCoach(config.repo, config.name, `${APP_URL}/dashboard/${dashboardToken(config.chatId)}`),
     onboarder: makeOnboarder(config.repo, config.name, (file) => session.scaffolded.add(file)),
     history: [],
     onboarding: false,
@@ -159,6 +160,10 @@ async function handleMessage(s: UserSession, text: string) {
     s.onboarding = false;
     s.history.length = 0;
     await sendTelegram(s.config.chatId, "Setup mode off — I'm your coach now. Try /brief for today's plan.");
+    return;
+  }
+  if (text === "/dashboard") {
+    await sendTelegram(s.config.chatId, `Your live dashboard: ${APP_URL}/dashboard/${dashboardToken(s.config.chatId)}`);
     return;
   }
   if (text === "/brief") {

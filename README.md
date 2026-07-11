@@ -117,6 +117,7 @@ Commands:
 | `/brief` | Send the morning brief now (today's session, exact targets, volume status) |
 | `/week` | Week-to-date volume vs targets |
 | `/plan` | Re-run the deep planner now and get a digest |
+| `/dashboard` | Send your live dashboard link |
 | `/init` | Enter setup mode (re-interview / rebuild data repo files); exits by itself once the files are written |
 | `/done` | Abandon setup mode manually (rarely needed — e.g. quitting a half-finished interview) |
 

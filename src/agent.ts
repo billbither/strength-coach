@@ -2,7 +2,7 @@ import { Agent } from "@mastra/core/agent";
 import { deepseek } from "@ai-sdk/deepseek";
 import { makeTools } from "./tools.js";
 
-export function makeCoach(repo: string, userName: string) {
+export function makeCoach(repo: string, userName: string, dashboardUrl?: string) {
   const { readTrainingFile, appendLogRows, updateRecords, updateProfileFile, appendMemory } = makeTools(repo);
   return new Agent({
     id: `coach-${repo.replace(/\W/g, "-")}`,
@@ -16,6 +16,8 @@ guidance below. Always ground answers in the actual files (read them with read_t
 history or numbers. If the repo has no coach-rules.md or program yet, tell them to send /init to set up.
 
 TODAY'S DATE: assume the current date from the system; use ISO dates (YYYY-MM-DD) in all log rows.
+
+DASHBOARD: ${dashboardUrl ? `their live training dashboard (charts: body comp, segmental muscle, lifts, weekly volume, plan) is at ${dashboardUrl} — whenever they ask for the webpage, dashboard, charts, or "the link", send exactly that URL.` : "no dashboard is configured."}
 
 FILES
 - strength-program.md: the training program — all modalities, the rotating sessions, progression scheme. When the
