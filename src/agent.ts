@@ -2,8 +2,8 @@ import { Agent } from "@mastra/core/agent";
 import { deepseek } from "@ai-sdk/deepseek";
 import { makeTools } from "./tools.js";
 
-export function makeCoach(repo: string, userName: string, dashboardUrl?: string) {
-  const { readTrainingFile, appendLogRows, updateRecords, updateProfileFile, appendMemory } = makeTools(repo);
+export function makeCoach(repo: string, userName: string, dashboardUrl?: string, onLogAppend?: (file: string) => void) {
+  const { readTrainingFile, appendLogRows, updateRecords, updateProfileFile, appendMemory } = makeTools(repo, undefined, onLogAppend);
   return new Agent({
     id: `coach-${repo.replace(/\W/g, "-")}`,
     name: `coach for ${userName}`,

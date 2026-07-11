@@ -25,6 +25,7 @@ type UserSession = {
   history: ChatMsg[];
   onboarding: boolean;
   scaffolded: Set<string>;
+  replanTimer?: ReturnType<typeof setTimeout>;
 };
 
 // Onboarding is complete once these files have actually been written — no /done needed.
@@ -34,7 +35,9 @@ const sessions = new Map<string, UserSession>();
 for (const config of loadUsers()) {
   const session: UserSession = {
     config,
-    coach: makeCoach(config.repo, config.name, `${APP_URL}/dashboard/${dashboardToken(config.chatId)}`),
+    coach: makeCoach(config.repo, config.name, `${APP_URL}/dashboard/${dashboardToken(config.chatId)}`, (file) => {
+      if (file === "workout-log.csv") scheduleReplan(session);
+    }),
     onboarder: makeOnboarder(config.repo, config.name, (file) => session.scaffolded.add(file)),
     history: [],
     onboarding: false,
@@ -43,6 +46,16 @@ for (const config of loadUsers()) {
   sessions.set(config.chatId, session);
 }
 console.log(`configured users: ${[...sessions.values()].map((s) => s.config.name).join(", ")}`);
+
+// A logged workout makes the plan stale — re-plan automatically, debounced so a session
+// logged across several messages triggers one replan, a few minutes after the last row.
+function scheduleReplan(s: UserSession) {
+  if (s.replanTimer) clearTimeout(s.replanTimer);
+  s.replanTimer = setTimeout(() => {
+    console.log(`auto-replan for ${s.config.name} (workout logged)`);
+    runNightlyPlanning(s.config).catch((e) => console.error(`auto-replan failed for ${s.config.name}:`, e));
+  }, 3 * 60 * 1000);
+}
 
 function remember(s: UserSession, role: ChatMsg["role"], content: string) {
   s.history.push({ role, content } as ChatMsg);

@@ -29,7 +29,7 @@ export const TRAINING_FILES = [
 // Tools are created per user, bound to that user's data repo.
 // onScaffoldWrite (optional) is called with the filename whenever write_training_file commits a file —
 // the server uses it to detect when onboarding has finished scaffolding the repo.
-export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void) {
+export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void, onLogAppend?: (file: string) => void) {
   const readTrainingFile = createTool({
     id: "read_training_file",
     description:
@@ -81,6 +81,7 @@ export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void
       }
       const base = content.endsWith("\n") || content.length === 0 ? content : content + "\n";
       await writeRepoFile(repo, file, base + rows.join("\n") + "\n", sha, commitMessage);
+      onLogAppend?.(file);
       return `Appended ${rows.length} row(s) to ${file} and pushed.`;
     },
   });
