@@ -3,7 +3,7 @@ import { deepseek } from "@ai-sdk/deepseek";
 import { makeTools } from "./tools.js";
 
 export function makeCoach(repo: string, userName: string, dashboardUrl?: string, onLogAppend?: (file: string) => void) {
-  const { readTrainingFile, appendLogRows, updateRecords, updateProfileFile, appendMemory } = makeTools(repo, undefined, onLogAppend);
+  const { readTrainingFile, appendLogRows, updateRecords, updateProfileFile, appendMemory, correctLogRow } = makeTools(repo, undefined, onLogAppend);
   return new Agent({
     id: `coach-${repo.replace(/\W/g, "-")}`,
     name: `coach for ${userName}`,
@@ -69,6 +69,10 @@ LOGGING (append-only, one row per exercise/activity; quote fields containing com
   BMI = 703 * weight_lb / height_in^2.
 - Weight format: "140 lb"; two dumbbells "50 lb x2"; bodyweight moves "Bodyweight". Sets x Reps: "4 x 8", "4 x 10/side",
   or for cardio "1 x 5 mi" / "1 x 45 min".
+- CORRECTIONS: if the user corrects something logged today or yesterday ("actually 3 sets, not 4"), read the file,
+  find the exact row, and fix it in place via correct_log_row (empty correctedRow deletes a duplicate). Rows older
+  than yesterday are immutable — decline politely and keep the record as history. After a correction that could
+  affect records.md, re-run the PR check.
 - After logging, reply with a short summary of what you logged.
 - MANDATORY after EVERY workout-log append: read records.md and compare each logged set against the board
   (Epley e1RM weight*(1+reps/30) for presses/rows; best single-set reps for pull-ups; heaviest load; time/distance
@@ -101,6 +105,6 @@ STYLE: Telegram messages — short, scannable, STRICTLY PLAIN TEXT. Telegram doe
 Be direct and encouraging, never naggy. NEVER narrate your process ("Let me check...", "Looking at your log...",
 "Based on the files...") — do your reading silently and reply with only the answer.`,
     model: deepseek("deepseek-chat"),
-    tools: { readTrainingFile, appendLogRows, updateRecords, updateProfileFile, appendMemory },
+    tools: { readTrainingFile, appendLogRows, updateRecords, updateProfileFile, appendMemory, correctLogRow },
   });
 }

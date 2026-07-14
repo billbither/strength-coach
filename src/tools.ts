@@ -13,6 +13,14 @@ function csvFieldCount(row: string): number {
   return count;
 }
 
+
+// Correction window: a row may be edited/deleted only if dated today or yesterday (America/New_York).
+export function withinCorrectionWindow(dateStr: string, now = new Date()): boolean {
+  const day = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+  const yesterday = new Date(now.getTime() - 24 * 3600 * 1000);
+  return dateStr === day(now) || dateStr === day(yesterday);
+}
+
 export const TRAINING_FILES = [
   "strength-program.md",
   "coach-rules.md",
@@ -138,6 +146,49 @@ export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void
   });
 
 
+
+  const correctLogRow = createTool({
+    id: "correct_log_row",
+    description:
+      "Fix or delete ONE recently-logged row in a log file. ONLY rows dated today or yesterday can be corrected " +
+      "(the tool enforces this) — older history is immutable; decline older correction requests and suggest the " +
+      "user notes it in chat instead. Pass the exact current row text and the corrected full row (or an empty " +
+      "string to delete, e.g. a duplicate).",
+    inputSchema: z.object({
+      file: z.enum(["workout-log.csv", "snacks.csv", "body.csv"]),
+      currentRow: z.string().describe("The exact full text of the existing row to correct"),
+      correctedRow: z.string().describe("The complete corrected row — or empty string to delete the row"),
+      commitMessage: z.string().describe('e.g. "correct: 2026-07-13 bench was 3 sets not 4"'),
+    }),
+    execute: async ({ file, currentRow, correctedRow, commitMessage }) => {
+      const { content, sha } = await readRepoFile(repo, file);
+      const lines = content.split("\n");
+      const header = lines[0];
+      const target = currentRow.trim();
+      if (target === header.trim()) throw new Error("The header row cannot be modified.");
+      const hits = lines.map((l, i) => ({ l, i })).filter(({ l }) => l.trim() === target);
+      if (hits.length === 0) throw new Error(`Row not found in ${file}. Read the file and pass the row EXACTLY as it appears.`);
+      if (hits.length > 1) throw new Error(`Row matches ${hits.length} lines — disambiguate (this may be a duplicate; delete one at a time by editing the file is not possible; ask the user).`);
+      const rowDate = target.split(",")[0];
+      if (!withinCorrectionWindow(rowDate)) {
+        throw new Error(`Row is dated ${rowDate} — outside the correction window (today or yesterday only). Older history is immutable.`);
+      }
+      const fixed = correctedRow.trim();
+      if (fixed) {
+        const expected = csvFieldCount(header);
+        const got = csvFieldCount(fixed);
+        if (got !== expected) throw new Error(`Corrected row has ${got} fields but the header has ${expected}. Header: ${header}`);
+        const newDate = fixed.split(",")[0];
+        if (!withinCorrectionWindow(newDate)) throw new Error(`Corrected row is dated ${newDate} — must stay within today/yesterday.`);
+        lines[hits[0].i] = fixed;
+      } else {
+        lines.splice(hits[0].i, 1);
+      }
+      await writeRepoFile(repo, file, lines.join("\n"), sha, commitMessage);
+      return fixed ? `Row corrected in ${file} and pushed.` : `Row deleted from ${file} and pushed.`;
+    },
+  });
+
   const appendMemory = createTool({
     id: "append_memory",
     description:
@@ -180,5 +231,5 @@ export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void
     },
   });
 
-  return { readTrainingFile, appendLogRows, writeTrainingFile, updateRecords, updateProfileFile, appendMemory };
+  return { readTrainingFile, appendLogRows, writeTrainingFile, updateRecords, updateProfileFile, appendMemory, correctLogRow };
 }
