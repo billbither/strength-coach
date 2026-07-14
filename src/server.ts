@@ -78,7 +78,8 @@ app.get("/dashboard/:token", async (c) => {
   if (!session) return c.text("not found", 404);
   try {
     c.header("Cache-Control", "no-store, must-revalidate");
-    return c.html(await renderDashboard(session.config));
+    const weeksBack = Math.max(0, Math.min(260, parseInt(c.req.query("w") ?? "0", 10) || 0));
+    return c.html(await renderDashboard(session.config, weeksBack));
   } catch (err) {
     console.error(`dashboard render failed for ${session.config.name}:`, err);
     return c.text("dashboard error — check logs", 500);

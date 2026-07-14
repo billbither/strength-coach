@@ -144,7 +144,7 @@ async function tryRead(repo: string, file: string): Promise<string> {
   }
 }
 
-export async function renderDashboard(user: UserConfig): Promise<string> {
+export async function renderDashboard(user: UserConfig, weeksBack = 0): Promise<string> {
   const [bodyCsv, logCsv, snacksCsv, records, plan] = await Promise.all([
     tryRead(user.repo, "body.csv"),
     tryRead(user.repo, "workout-log.csv"),
@@ -221,13 +221,17 @@ export async function renderDashboard(user: UserConfig): Promise<string> {
     )
     .join("");
 
-  // weekly volume (Mon-Sun current week, America/New_York "today")
+  // selected week (Mon-Sun, America/New_York), weeksBack weeks before the current one
   const today = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
   const dow = (today.getDay() + 6) % 7; // Mon=0
   const monday = new Date(today);
-  monday.setDate(today.getDate() - dow);
-  const wkStart = monday.toISOString().slice(0, 10);
-  const inWeek = (d: string) => d >= wkStart;
+  monday.setDate(today.getDate() - dow - weeksBack * 7);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  const wkStart = iso(monday);
+  const wkEnd = iso(sunday);
+  const inWeek = (d: string) => d >= wkStart && d <= wkEnd;
   const movements: [string, RegExp][] = [
     ["Pull-ups", /pull.?up/i],
     ["Push-ups", /push.?up/i],
@@ -242,13 +246,13 @@ export async function renderDashboard(user: UserConfig): Promise<string> {
       const reps = parseReps(r["Sets x Reps"] ?? "");
       if (sets && reps) total += sets * reps;
     }
-    return { label, value: total, tip: `${label} this week: ${total} reps` };
+    return { label, value: total, tip: `${label} ${wkStart} to ${wkEnd}: ${total} reps` };
   });
   const vol = barChart(volume, S2, "");
 
-  // recent sessions
+  // sessions in the selected week
   const recent = log
-    .slice(-12)
+    .filter((r) => inWeek(r.Date))
     .reverse()
     .map(
       (r) =>
@@ -278,6 +282,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
 td{border-bottom:1px solid var(--line);padding:6px 8px}
 pre{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;white-space:pre-wrap;font-size:12.5px;line-height:1.45;overflow-x:auto}
 .muted{color:var(--muted)}
+.weeknav{font-size:13px;margin:-4px 0 10px}.weeknav a{color:var(--s1);text-decoration:none}.weeknav a:hover{text-decoration:underline}
 .md h1{font-size:17px;margin:4px 0 10px}.md h2{font-size:15px;margin:18px 0 8px}.md h3{font-size:13.5px;margin:14px 0 6px;color:var(--text2)}
 .md p,.md li{font-size:13.5px;color:var(--text)}.md ul{padding-left:20px;margin:6px 0}.md table{margin:8px 0}.md hr{border:none;border-top:1px solid var(--line);margin:14px 0}
 .md strong{font-weight:600}.md code{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:0 4px;font-size:12.5px}#tip{position:fixed;display:none;background:var(--text);color:var(--surface);font-size:12px;padding:4px 9px;border-radius:6px;pointer-events:none;z-index:9}
@@ -290,12 +295,13 @@ pre{background:var(--card);border:1px solid var(--line);border-radius:10px;paddi
   <div class="card"><h3>Weight &amp; muscle mass (lb)</h3>${wm}</div>
   <div class="card"><h3>Body fat (%)</h3>${bf}</div>
   <div class="card"><h3>Segmental muscle — latest (lb)</h3>${seg}</div>
-  <div class="card"><h3>Weekly volume — this week (reps)</h3>${vol}</div>
+  <div class="card"><h3>Weekly volume — week of ${wkStart} (reps)</h3>${vol}</div>
 </div>
 <h2>Lifts</h2>
 <div class="grid2">${liftCharts || '<p class="muted">Not enough logged lifts yet.</p>'}</div>
-<h2>Recent sessions</h2>
-<div class="card" style="overflow-x:auto"><table><thead><tr><th>Date</th><th>Workout</th><th>Exercise</th><th>Sets×Reps</th><th>Weight</th><th>Effort</th></tr></thead><tbody>${recent}</tbody></table></div>
+<h2>Sessions — week of ${wkStart}${weeksBack === 0 ? " (current)" : ""}</h2>
+<div class="weeknav"><a href="?w=${weeksBack + 1}">← previous week</a>${weeksBack > 0 ? ` · <a href="?w=${weeksBack - 1}">next week →</a> · <a href="?w=0">current</a>` : ""}</div>
+<div class="card" style="overflow-x:auto">${recent ? `<table><thead><tr><th>Date</th><th>Workout</th><th>Exercise</th><th>Sets×Reps</th><th>Weight</th><th>Effort</th></tr></thead><tbody>${recent}</tbody></table>` : '<p class="muted">No sessions logged this week.</p>'}</div>
 <h2>PR board</h2>
 <div class="card md" style="overflow-x:auto">${recordsHtml}</div>
 <h2>Current plan</h2>
