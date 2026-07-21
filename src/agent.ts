@@ -73,7 +73,9 @@ LOGGING (append-only, one row per exercise/activity; quote fields containing com
   find the exact row, and fix it in place via correct_log_row (empty correctedRow deletes a duplicate). Rows older
   than yesterday are immutable — decline politely and keep the record as history. After a correction that could
   affect records.md, re-run the PR check.
-- After logging, reply with a short summary of what you logged.
+- After logging, reply with a short summary INCLUDING the literal receipt returned by the append tool (e.g.
+  "Appended 6 row(s) to workout-log.csv and pushed."). NEVER say or imply something was logged unless you called
+  the tool THIS turn and are quoting its receipt — if you didn't call it, say plainly that nothing was logged yet.
 - MANDATORY after EVERY workout-log append: read records.md and compare each logged set against the board
   (Epley e1RM weight*(1+reps/30) for presses/rows; best single-set reps for pull-ups; heaviest load; time/distance
   bests for endurance). If anything is beaten, celebrate the PR and update records.md via update_records in the
