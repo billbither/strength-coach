@@ -225,10 +225,29 @@ async function handleMessage(s: UserSession, text: string) {
   }
 }
 
+const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID ?? [...sessions.keys()][0];
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// Sequential (not concurrent — two reasoner runs at once pressure a 512MB machine),
+// one retry after a minute, and the admin hears about a final failure instead of silence.
 function forEachUser(label: string, fn: (s: UserSession) => Promise<unknown>) {
-  return () => {
+  return async () => {
     for (const s of sessions.values()) {
-      fn(s).catch((e) => console.error(`${label} failed for ${s.config.name}:`, e));
+      try {
+        await fn(s);
+      } catch (e1) {
+        console.error(`${label} failed for ${s.config.name}, retrying in 60s:`, e1);
+        await sleep(60_000);
+        try {
+          await fn(s);
+        } catch (e2) {
+          console.error(`${label} failed for ${s.config.name} after retry:`, e2);
+          await sendTelegram(
+            ADMIN_CHAT_ID,
+            `⚠️ ${label} failed for ${s.config.name} (after retry): ${String(e2).slice(0, 300)}`,
+          ).catch(() => {});
+        }
+      }
     }
   };
 }

@@ -83,8 +83,13 @@ export async function runNightlyPlanning(user: UserConfig): Promise<string> {
     { maxSteps: 1 },
   );
 
-  const plan = result.text?.trim();
-  if (!plan || !plan.startsWith("#")) throw new Error(`planner returned unusable output: ${plan?.slice(0, 120)}`);
+  let plan = result.text?.trim() ?? "";
+  if (!plan.startsWith("#")) {
+    // reasoner sometimes emits preamble — salvage from the first markdown heading
+    const idx = plan.indexOf("\n# ");
+    if (idx >= 0) plan = plan.slice(idx + 1).trim();
+  }
+  if (!plan.startsWith("#")) throw new Error(`planner returned unusable output: ${plan.slice(0, 120)}`);
 
   await writeRepoFile(user.repo, "coach-plan.md", plan + "\n", sha, `plan: ${today} nightly programming update`);
   return plan;
