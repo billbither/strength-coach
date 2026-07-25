@@ -1,5 +1,5 @@
 import { Agent } from "@mastra/core/agent";
-import { deepseek } from "@ai-sdk/deepseek";
+import { chatModel } from "./models.js";
 import { makeTools } from "./tools.js";
 
 export function makeOnboarder(repo: string, userName: string, onScaffoldWrite?: (file: string) => void) {
@@ -57,7 +57,7 @@ FINISH: tell them setup is complete and committed, and explain in a few plain li
 describe training/snacks/weigh-ins in normal language and they get logged; /brief = morning brief now; /week =
 volume check; /plan = regenerate the forward plan). Coaching mode switches on automatically — their very next
 message goes to their coach.`,
-    model: deepseek("deepseek-chat"),
+    model: chatModel(),
     tools: { readTrainingFile, writeTrainingFile },
   });
 }

@@ -1,5 +1,5 @@
 import { Agent } from "@mastra/core/agent";
-import { deepseek } from "@ai-sdk/deepseek";
+import { reasonerModel } from "./models.js";
 import { readRepoFile, writeRepoFile } from "./github.js";
 import type { UserConfig } from "./users.js";
 
@@ -51,7 +51,7 @@ force otherwise.
 ## Watch items  (specific, evidence-based: e.g. grip fatigue ordering, joint monitoring, stalled lifts, mileage ramps)
 ## Deload countdown  (weeks until due; what the deload week will look like when it arrives)
 Keep it under ~120 lines. Exact numbers everywhere — this file is what the daily coach quotes.`,
-  model: deepseek("deepseek-reasoner"),
+  model: reasonerModel(),
 });
 
 const SOURCE_FILES = [

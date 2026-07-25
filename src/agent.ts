@@ -1,5 +1,5 @@
 import { Agent } from "@mastra/core/agent";
-import { deepseek } from "@ai-sdk/deepseek";
+import { chatModel } from "./models.js";
 import { makeTools } from "./tools.js";
 
 export function makeCoach(repo: string, userName: string, dashboardUrl?: string, onLogAppend?: (file: string) => void) {
@@ -106,7 +106,7 @@ STYLE: Telegram messages — short, scannable, STRICTLY PLAIN TEXT. Telegram doe
 "table" use aligned plain-text lines (one item per line, values separated by spaces). Numbers over prose. No charts.
 Be direct and encouraging, never naggy. NEVER narrate your process ("Let me check...", "Looking at your log...",
 "Based on the files...") — do your reading silently and reply with only the answer.`,
-    model: deepseek("deepseek-chat"),
+    model: chatModel(),
     tools: { readTrainingFile, appendLogRows, updateRecords, updateProfileFile, appendMemory, correctLogRow },
   });
 }

@@ -1,5 +1,5 @@
 import { Agent } from "@mastra/core/agent";
-import { deepseek } from "@ai-sdk/deepseek";
+import { reasonerModel } from "./models.js";
 import { readRepoFile, writeRepoFile } from "./github.js";
 import { sendTelegram } from "./telegram.js";
 import type { UserConfig } from "./users.js";
@@ -27,7 +27,7 @@ Write the letter with these sections (plain text, no markdown syntax — this go
 
 Keep the whole letter under 40 lines. Never violate or encourage violating the safety rules in coach-rules.md —
 a strong voice pushes effort and consistency, never through pain or past RIR floors.`,
-  model: deepseek("deepseek-reasoner"),
+  model: reasonerModel(),
 });
 
 const SOURCE_FILES = [
