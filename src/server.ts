@@ -12,6 +12,7 @@ import { runNightlyPlanning } from "./planner.js";
 import { runWeeklyReview } from "./weekly.js";
 import { loadUsers, type UserConfig } from "./users.js";
 import { renderDashboard } from "./dashboard.js";
+import { runHealthCheck } from "./health.js";
 import { createHash } from "node:crypto";
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET!;
@@ -54,7 +55,12 @@ function scheduleReplan(s: UserSession) {
   if (s.replanTimer) clearTimeout(s.replanTimer);
   s.replanTimer = setTimeout(() => {
     console.log(`auto-replan for ${s.config.name} (workout logged)`);
-    runNightlyPlanning(s.config).catch((e) => console.error(`auto-replan failed for ${s.config.name}:`, e));
+    runNightlyPlanning(s.config).catch(async (e) => {
+      console.error(`auto-replan failed for ${s.config.name}:`, e);
+      await sendTelegram(ADMIN_CHAT_ID, `⚠️ auto-replan failed for ${s.config.name}: ${String(e).slice(0, 300)}`).catch(
+        () => {},
+      );
+    });
   }, 3 * 60 * 1000);
 }
 
@@ -178,6 +184,11 @@ async function handleMessage(s: UserSession, text: string) {
     await sendTelegram(s.config.chatId, "Setup mode off — I'm your coach now. Try /brief for today's plan.");
     return;
   }
+  if (text === "/health") {
+    const problems = await runHealthCheck(allUsers(), s.config.chatId, "on demand");
+    if (!problems.length) await sendTelegram(s.config.chatId, "✅ All good — GitHub, model API, and repos reachable.");
+    return;
+  }
   if (text === "/dashboard") {
     await sendTelegram(s.config.chatId, `Your live dashboard: ${APP_URL}/dashboard/${dashboardToken(s.config.chatId)}`);
     return;
@@ -265,6 +276,14 @@ cron.schedule("0 2 * * *", forEachUser("nightly planning", (s) => runNightlyPlan
 cron.schedule("0 18 * * 0", forEachUser("weekly review", (s) => runWeeklyReview(s.config)), {
   timezone: "America/New_York",
 });
+
+// Probe credentials directly every morning (before the 7am brief) and once at boot —
+// a dead token or retired model name announces itself instead of silently degrading.
+const allUsers = () => [...sessions.values()].map((s) => s.config);
+cron.schedule("30 6 * * *", () => runHealthCheck(allUsers(), ADMIN_CHAT_ID, "daily check").catch(() => {}), {
+  timezone: "America/New_York",
+});
+setTimeout(() => runHealthCheck(allUsers(), ADMIN_CHAT_ID, "startup").catch(() => {}), 10_000);
 
 const port = Number(process.env.PORT ?? 8080);
 serve({ fetch: app.fetch, port, hostname: "0.0.0.0" });
