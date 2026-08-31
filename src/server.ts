@@ -264,25 +264,20 @@ function forEachUser(label: string, fn: (s: UserSession) => Promise<unknown>) {
 }
 
 // Daily schedules — timezone-aware (handles DST, unlike fixed-UTC cron).
-cron.schedule("0 7 * * *", forEachUser("morning brief", (s) => runBrief("morning", s.config, s.coach)), {
-  timezone: "America/New_York",
-});
-cron.schedule("0 13 * * *", forEachUser("snack nudge", (s) => runBrief("snack", s.config, s.coach)), {
-  timezone: "America/New_York",
-});
-cron.schedule("0 2 * * *", forEachUser("nightly planning", (s) => runNightlyPlanning(s.config)), {
-  timezone: "America/New_York",
-});
-cron.schedule("0 18 * * 0", forEachUser("weekly review", (s) => runWeeklyReview(s.config)), {
-  timezone: "America/New_York",
-});
+// missedExecutionTolerance: node-cron's default is 1s, and on this shared-CPU Fly machine the
+// heartbeat timer routinely wakes ~2s late — past the tolerance, so every job was logged as
+// "missed execution" and SKIPPED (no briefs, no nightly plans). These are daily jobs; running
+// minutes late is always better than not at all.
+const cronOpts = { timezone: "America/New_York", missedExecutionTolerance: 15 * 60_000 };
+cron.schedule("0 7 * * *", forEachUser("morning brief", (s) => runBrief("morning", s.config, s.coach)), cronOpts);
+cron.schedule("0 13 * * *", forEachUser("snack nudge", (s) => runBrief("snack", s.config, s.coach)), cronOpts);
+cron.schedule("0 2 * * *", forEachUser("nightly planning", (s) => runNightlyPlanning(s.config)), cronOpts);
+cron.schedule("0 18 * * 0", forEachUser("weekly review", (s) => runWeeklyReview(s.config)), cronOpts);
 
 // Probe credentials directly every morning (before the 7am brief) and once at boot —
 // a dead token or retired model name announces itself instead of silently degrading.
 const allUsers = () => [...sessions.values()].map((s) => s.config);
-cron.schedule("30 6 * * *", () => runHealthCheck(allUsers(), ADMIN_CHAT_ID, "daily check").catch(() => {}), {
-  timezone: "America/New_York",
-});
+cron.schedule("30 6 * * *", () => runHealthCheck(allUsers(), ADMIN_CHAT_ID, "daily check").catch(() => {}), cronOpts);
 setTimeout(() => runHealthCheck(allUsers(), ADMIN_CHAT_ID, "startup").catch(() => {}), 10_000);
 
 const port = Number(process.env.PORT ?? 8080);
