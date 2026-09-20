@@ -41,11 +41,16 @@ document. Structure it as:
 # Coach Plan (updated YYYY-MM-DD)
 ## Where you are  (rotation state, weeks since deload, one-paragraph read of the last 2 weeks)
 ## This week, day by day  (a one-line calendar: every day from today through ~7 days out, each marked REST or the session name)
-BEFORE writing the calendar, do this check explicitly: write down the dates of the last 3 logged workout sessions
-and compare them to today's date. If a session was logged YESTERDAY and the day before, today MUST be REST — no
-exceptions. Never schedule more than 2 training days in a row anywhere in the calendar (counting already-logged
-sessions as training days), and default to a rest day between sessions for a 50+ trainee unless volume targets
-force otherwise.
+BEFORE writing the calendar, do this check explicitly: write down the dates of the last 3 logged workout sessions,
+compare them to today's date, and state the number of days since the most recent one. Then apply BOTH rules:
+- Too much, too close: if a session was logged YESTERDAY and the day before, today MUST be REST — no exceptions.
+  Never schedule more than 2 training days in a row anywhere in the calendar (counting already-logged sessions as
+  training days), and default to a rest day between sessions for a 50+ trainee unless volume targets force otherwise.
+- Layoff: the rest-between-sessions default applies only AFTER a training day. If 4 or more days have passed since
+  the last logged session, today is a TRAINING day — the next session in rotation — never REST and never an extra
+  "ease back in" day. The only exception is a reason in memory.md that explicitly covers TODAY'S date (travel dates
+  that include today, illness noted as ongoing). Do not invent one: a trip that memory says ended yesterday does not
+  extend into today. State the layoff length and the snack count since the last session plainly in "Where you are".
 ## Next 3 sessions  (each session: every exercise/effort with exact sets x reps x weight or distance/duration/intensity, RIR/RPE, ordering notes; date each session to match the calendar above)
 ## This week's volume strategy  (what to snack / run / attend and roughly when, to hit the targets)
 ## Watch items  (specific, evidence-based: e.g. grip fatigue ordering, joint monitoring, stalled lifts, mileage ramps)

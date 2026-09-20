@@ -18,6 +18,11 @@ Read coach-plan.md (the nightly forward plan — your primary source for today's
 coach-rules.md, memory.md (recent context — travel, pain, schedule), workout-log.csv, snacks.csv, body.csv and records.md, then send a short, scannable brief (not an
 essay; strictly plain text — no markdown):
 
+0. LAYOFF CHECK — do this first, from the dates in workout-log.csv: how many days since my last logged session, and
+   how many snacks logged since it. If it's 4 or more days, the brief OPENS with that number in the coaching voice
+   from coach-rules.md — blunt, no softening, ask what happened — and today's session is non-negotiable: never
+   propose a rest day after a layoff, even if coach-plan.md says REST (the plan is stale; the next session in
+   rotation is today's). Under 4 days: skip this section entirely and say nothing about it.
 1. TODAY'S PLAN — from the plan, my recent logged sessions, and my program's rotation/schedule: what's on today
    (which session, a run, a class, or a rest/active-recovery day)? If I trained hard yesterday, protect recovery.
    Flag a deload if one is near per my rules.
