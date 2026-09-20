@@ -1,6 +1,7 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import { readRepoFile, writeRepoFile } from "./github.js";
+import { normalizeRows } from "./normalize.js";
 
 // Quote-aware CSV field counter — used to reject malformed rows before they corrupt a log.
 function csvFieldCount(row: string): number {
@@ -75,10 +76,11 @@ export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void
         .string()
         .describe('Commit message, e.g. "log: 2026-07-08 Builder C" or "snacks: 2026-07-08" or "weigh-in: 2026-07-08"'),
     }),
-    execute: async ({ file, rows, commitMessage }) => {
+    execute: async ({ file, rows: rawRows, commitMessage }) => {
       const { content, sha } = await readRepoFile(repo, file);
       const header = content.split("\n")[0];
       const expected = csvFieldCount(header);
+      const { rows, changes } = normalizeRows(file, content, rawRows);
       for (const row of rows) {
         const got = csvFieldCount(row);
         if (got !== expected) {
@@ -92,7 +94,8 @@ export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void
       const base = content.endsWith("\n") || content.length === 0 ? content : content + "\n";
       await writeRepoFile(repo, file, base + rows.join("\n") + "\n", sha, commitMessage);
       onLogAppend?.(file);
-      return `Appended ${rows.length} row(s) to ${file} and pushed.`;
+      const note = changes.length ? ` Normalized names to match the log: ${changes.join(", ")}.` : "";
+      return `Appended ${rows.length} row(s) to ${file} and pushed.${note}`;
     },
   });
 

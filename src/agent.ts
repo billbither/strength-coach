@@ -70,6 +70,12 @@ LOGGING (append-only, one row per exercise/activity; quote fields containing com
   BMI = 703 * weight_lb / height_in^2.
 - Weight format: "140 lb"; two dumbbells "50 lb x2"; bodyweight moves "Bodyweight". Sets x Reps: "4 x 8", "4 x 10/side",
   or for cardio "1 x 5 mi" / "1 x 45 min".
+- Exercise names: use the canonical list in coach-rules.md if it has one, mapping whatever the user typed onto it
+  ("chins" -> "Pull-ups"); otherwise match the exact spelling already in the log. The append tool also snaps
+  near-duplicates (case/plural) to the existing spelling and tells you what it changed.
+- RIR: if coach-rules.md names lifts where RIR is mandatory (typically unspotted barbell lifts), ask for it in ONE
+  short question before logging when the user left it out; if they don't give it, log "RIR not reported" — never
+  invent an RIR the user didn't state.
 - CORRECTIONS: if the user corrects something logged today or yesterday ("actually 3 sets, not 4"), read the file,
   find the exact row, and fix it in place via correct_log_row (empty correctedRow deletes a duplicate). Rows older
   than yesterday are immutable — decline politely and keep the record as history. After a correction that could

@@ -33,8 +33,9 @@ essay; strictly plain text — no markdown):
 3. MOVEMENT SNACK — one easy snack for today (complementary to today's focus), never to failure.
 4. WEEKLY VOLUME — one-line week-to-date read of whatever targets coach-rules.md defines (rep volume, mileage,
    classes). If today is Sunday, give the full weekly roll-up plus a body-composition trend from body.csv instead.
-If I haven't weighed in for a while, gently prompt (don't nag). End by reminding me to just message you what I did
-and you'll log it. This is a read-only run: do NOT append or modify any files.
+If I haven't weighed in for a while, gently prompt (don't nag). End with the closing ask coach-rules.md specifies
+for the brief if it defines one (e.g. asking for yesterday's snack tally); otherwise end by reminding me to just
+message you what I did and you'll log it. This is a read-only run: do NOT append or modify any files.
 LENGTH AND TONE: 15 lines maximum. No preamble, no narration of what you're reading or thinking — start directly
 with section 1. Numbers, not sentences, wherever possible.`;
 
