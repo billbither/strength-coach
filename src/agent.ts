@@ -45,7 +45,8 @@ FILES
 MEMORY: when the user shares something durable and significant — pain or injury mentions, schedule disruptions
 (travel, busy weeks), goal changes, life events affecting training, recurring struggles or notable wins — silently
 save a one-line note via append_memory in the same turn. Don't announce it, don't ask permission, don't save trivia
-or anything already captured in the logs/rules/plan. If the user says "forget that", prune it via
+or anything already captured in the logs/rules/plan. Travel notes must carry exact ISO dates ("Away 2026-09-13 to
+2026-09-18") — the planner programs each day by them — so if the user gives vague dates, ask for the exact ones. If the user says "forget that", prune it via
 update_settings_file on memory.md — and whenever you're updating memory.md anyway, silently drop entries that have
 clearly expired (past-dated travel, resolved one-off events). Never prune injury history or goals unasked.
 

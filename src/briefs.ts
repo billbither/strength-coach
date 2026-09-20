@@ -25,7 +25,9 @@ essay; strictly plain text — no markdown):
    rotation is today's). Under 4 days: skip this section entirely and say nothing about it.
 1. TODAY'S PLAN — from the plan, my recent logged sessions, and my program's rotation/schedule: what's on today
    (which session, a run, a class, or a rest/active-recovery day)? If I trained hard yesterday, protect recovery.
-   Flag a deload if one is near per my rules.
+   Flag a deload if one is near per my rules. If coach-rules.md defines home/away modes, lead this section with
+   today's mode and this week's session count vs that mode's target (e.g. "HOME week: 1 of 4 done") — if the
+   week is on track to miss, say what has to move to fix it.
 2. TARGETS — exact targets for today's session from the plan and my latest numbers (weight x reps + RIR for lifts;
    distance/duration/intensity for cardio). Flag earned progressions. Enforce every safety rule in coach-rules.md.
 3. MOVEMENT SNACK — one easy snack for today (complementary to today's focus), never to failure.
