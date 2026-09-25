@@ -256,6 +256,18 @@ async function handleMessage(s: UserSession, text: string) {
     await sendTelegram(s.config.chatId, `Your live dashboard: ${APP_URL}/dashboard/${dashboardToken(s.config.chatId)}`);
     return;
   }
+  if (text === "/progress") {
+    const result = await s.coach.generate(
+      "Give me a read-only progress review against my goals. Call read_progress_snapshot; read coach-rules.md, " +
+      "workout-log.csv, and the relevant program/plan. Compare logged nutrition, multi-reading weight and scale " +
+      "muscle trends, and actual strength progression. Give one specific eating adjustment and one specific " +
+      "training adjustment with the evidence and a way to check each next week. If the data are too sparse, " +
+      "make the action a concrete logging or measurement step. Do not modify files.",
+      { maxSteps: 16 },
+    );
+    await sendTelegram(s.config.chatId, finalText(result));
+    return;
+  }
   if (text === "/letter") {
     await sendTelegram(s.config.chatId, "Writing your weekly review (reasoning model — takes a minute)...");
     await runWeeklyReview(s.config);

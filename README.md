@@ -126,11 +126,14 @@ Commands:
 | `/week` | Week-to-date volume vs targets |
 | `/plan` | Re-run the deep planner now and get a digest |
 | `/dashboard` | Send your live dashboard link |
+| `/progress` | Review logged nutrition, strength training, and weight/muscle trends against your goals; get specific eating and training actions |
 | `/letter` | Get your weekly coach's review now (also arrives automatically Sunday 6 PM) |
 | `/init` | Enter setup mode (re-interview / rebuild data repo files); exits by itself once the files are written |
 | `/done` | Abandon setup mode manually (rarely needed — e.g. quitting a half-finished interview) |
 
 Scheduled (all times America/New_York, DST-aware): morning brief 7:00 AM, snack nudge 1:00 PM, nightly re-plan 2:00 AM, weekly coach's letter Sunday 6:00 PM (accountability review in your chosen coaching voice — set per user in coach-rules.md).
+
+The coach now reviews nutrition, training performance, and multi-reading body trends together. The nightly plan and Sunday letter connect those observations to the goals in `coach-rules.md` and suggest specific eating and training adjustments. `/progress` runs that review on demand. Nutrition totals represent logged food only; incomplete days are not treated as full-day intake, and one scale muscle reading is not treated as a trend.
 
 ## Households: multiple people, one deployment
 

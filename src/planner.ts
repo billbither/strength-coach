@@ -2,6 +2,7 @@ import { Agent } from "@mastra/core/agent";
 import { reasonerModel } from "./models.js";
 import { readRepoFile, writeRepoFile } from "./github.js";
 import type { UserConfig } from "./users.js";
+import { buildProgressSnapshot } from "./progress.js";
 
 // Long-horizon programming runs on the reasoning model; no tools — all context is inlined
 // so this works regardless of the reasoner's function-calling support.
@@ -37,8 +38,14 @@ from the rule's number, and never a weight×reps already completed. Only the har
 outrank the log, and even they set the effort for a set, not a cap on the next load.
 The plan must be grounded in what they ACTUALLY did (workout-log.csv, snacks.csv) — not the idealized program.
 Look for patterns: skipped exercises, grip limitations, ordering problems, stalled lifts, volume shortfalls,
-recovery signals, and adjust the plan to fix them. nutrition.csv contains reported protein/calorie intake; use it
-for fueling context when present, but never treat partial food logs as complete daily intake. memory.md holds dated conversational context (travel, pain mentions, life events) — factor it in. Balance recovery ACROSS modalities (don't stack a hard run
+recovery signals, and adjust the plan to fix them. nutrition.csv contains reported protein/calorie intake. Compare
+nutrition, training progression, and the multi-reading weight/scale-muscle trend against the user's stated goals.
+Use the computed progress snapshot as a check on date windows and coverage, then inspect raw exercise rows for
+load/reps/RIR. Never treat partial food logs as complete intake; never invent a calorie target or diagnose a calorie
+deficit from incomplete entries. Treat BIA muscle values as noisy and require repeated readings before calling a
+trend. When the goal is not being met, change the upcoming training prescription within the existing program and
+give a specific eating action or data-gathering action that follows coach-rules.md. Explain the evidence and when
+to reassess. memory.md holds dated conversational context (travel, pain mentions, life events) — factor it in. Balance recovery ACROSS modalities (don't stack a hard run
 against a heavy lower-body day). Body-composition trends (body.csv) inform recovery notes.
 
 Output format: ONLY the complete markdown content of coach-plan.md — no preamble, no code fences around the whole
@@ -64,6 +71,9 @@ compare them to today's date, and state the number of days since the most recent
   closer together within the pairing rules rather than accepting the shortfall.
 ## Next 3 sessions  (each session: every exercise/effort with exact sets x reps x weight or distance/duration/intensity, RIR/RPE, ordering notes; date each session to match the calendar above)
 ## This week's volume strategy  (what to snack / run / attend and roughly when, to hit the targets)
+## Nutrition and body trend  (goal vs logged protein/calories, weight and scale-muscle trend with sample counts,
+   connection to strength progression; one concrete eating action and one training adjustment or measurement action,
+   plus a date to reassess. If evidence is sparse, say so explicitly.)
 ## Watch items  (specific, evidence-based: e.g. grip fatigue ordering, joint monitoring, stalled lifts, mileage ramps)
 ## Deload countdown  (weeks until due; what the deload week will look like when it arrives)
 EXERCISE VARIATION: if the program defines a variation policy with an exercise pool, apply it exactly as written —
@@ -88,15 +98,17 @@ const SOURCE_FILES = [
 ] as const;
 
 export async function runNightlyPlanning(user: UserConfig): Promise<string> {
-  const parts = await Promise.all(
+  const sourceEntries = await Promise.all(
     SOURCE_FILES.map(async (f) => {
       try {
-        return `===== ${f} =====\n${(await readRepoFile(user.repo, f)).content}`;
+        return [f, (await readRepoFile(user.repo, f)).content] as const;
       } catch {
-        return `===== ${f} =====\n(file not present in repo)`;
+        return [f, "(file not present in repo)"] as const;
       }
     }),
   );
+  const sources = Object.fromEntries(sourceEntries) as Record<string, string>;
+  const parts = sourceEntries.map(([file, content]) => `===== ${file} =====\n${content}`);
 
   let currentPlan = "(no coach-plan.md yet — this is the first run)";
   let sha: string | undefined;
@@ -109,8 +121,11 @@ export async function runNightlyPlanning(user: UserConfig): Promise<string> {
   }
 
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+  const snapshot = buildProgressSnapshot({
+    nutrition: sources["nutrition.csv"], body: sources["body.csv"], workout: sources["workout-log.csv"],
+  }, today);
   const result = await planner.generate(
-    `Today is ${today}.\n\n${parts.join("\n\n")}\n\n===== current coach-plan.md =====\n${currentPlan}\n\n` +
+    `Today is ${today}.\n\n${snapshot}\n\n${parts.join("\n\n")}\n\n===== current coach-plan.md =====\n${currentPlan}\n\n` +
       `Write the new complete coach-plan.md.`,
     { maxSteps: 1 },
   );

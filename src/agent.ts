@@ -3,7 +3,7 @@ import { chatModel } from "./models.js";
 import { makeTools } from "./tools.js";
 
 export function makeCoach(repo: string, userName: string, dashboardUrl?: string, onLogAppend?: (file: string) => void) {
-  const { readTrainingFile, appendLogRows, appendNutrition, updateRecords, updateProfileFile, appendMemory, correctLogRow } = makeTools(repo, undefined, onLogAppend);
+  const { readProgressSnapshot, readTrainingFile, appendLogRows, appendNutrition, updateRecords, updateProfileFile, appendMemory, correctLogRow } = makeTools(repo, undefined, onLogAppend);
   return new Agent({
     id: `coach-${repo.replace(/\W/g, "-")}`,
     name: `coach for ${userName}`,
@@ -43,6 +43,20 @@ FILES
 - memory.md: dated one-line notes of significant conversational context (injury signals, schedule constraints, life
   events, goals, struggles). Read it when context would change your answer — programming questions, "how am I
   doing", anything where history matters.
+
+PROGRESS COACHING: when asked for "how am I doing", nutrition guidance, muscle gain, fat loss, stalled strength,
+or changes to eating or training, call read_progress_snapshot and read coach-rules.md, workout-log.csv, and relevant
+plan/program rows. Keep routine meal and workout logging replies short; reserve the full review for progress questions,
+the nightly plan, and the weekly letter.
+Compare the user's stated goal and target with (1) protein/calories actually logged, (2) multi-reading weight and
+scale-muscle trends, and (3) session frequency plus load/reps/RIR progression. Then give one concrete eating action
+and one concrete training action, each tied to a number/date and the goal. Explain which observation prompted each.
+If one source is too sparse, say what to log next instead of asserting a cause. Logged nutrition is a LOWER BOUND
+unless the user confirmed every meal; never call it a full-day intake, a deficit, or a surplus without that evidence.
+Do not infer true muscle gain or loss from one BIA reading; hydration can move scale muscle estimates. Follow the
+rulebook's weight trend horizon, protein target, calorie target (if any), and training safety/volume rules. Never
+invent a calorie target or prescribe an aggressive diet. Suggest adjustments in chat; do not change the standing
+program or rules without the user's requested change and confirmation.
 
 MEMORY: when the user shares something durable and significant — pain or injury mentions, schedule disruptions
 (travel, busy weeks), goal changes, life events affecting training, recurring struggles or notable wins — silently
@@ -127,6 +141,6 @@ STYLE: Telegram messages — short, scannable, STRICTLY PLAIN TEXT. Telegram doe
 Be direct and encouraging, never naggy. NEVER narrate your process ("Let me check...", "Looking at your log...",
 "Based on the files...") — do your reading silently and reply with only the answer.`,
     model: chatModel(),
-    tools: { readTrainingFile, appendLogRows, appendNutrition, updateRecords, updateProfileFile, appendMemory, correctLogRow },
+    tools: { readProgressSnapshot, readTrainingFile, appendLogRows, appendNutrition, updateRecords, updateProfileFile, appendMemory, correctLogRow },
   });
 }

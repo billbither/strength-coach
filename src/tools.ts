@@ -3,6 +3,7 @@ import { z } from "zod";
 import { readRepoFile, writeRepoFile } from "./github.js";
 import { normalizeRows } from "./normalize.js";
 import { NUTRITION_HEADER, appendNutritionEntries } from "./nutrition.js";
+import { buildProgressSnapshot } from "./progress.js";
 
 // Quote-aware CSV field counter — used to reject malformed rows before they corrupt a log.
 function csvFieldCount(row: string): number {
@@ -42,6 +43,28 @@ export const TRAINING_FILES = [
 // onScaffoldWrite (optional) is called with the filename whenever write_training_file commits a file —
 // the server uses it to detect when onboarding has finished scaffolding the repo.
 export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void, onLogAppend?: (file: string) => void) {
+  const readProgressSnapshot = createTool({
+    id: "read_progress_snapshot",
+    description:
+      "Read a computed 7-day nutrition, body-weight, scale-muscle, and training-session snapshot. " +
+      "Use it before suggesting changes to eating or training; then read coach-rules.md and exercise rows for goals and safety.",
+    inputSchema: z.object({}),
+    execute: async () => {
+      const readOptional = async (file: string) => {
+        try { return (await readRepoFile(repo, file)).content; }
+        catch (error) {
+          if (error instanceof Error && error.message.includes(`${file} failed: 404 `)) return "";
+          throw error;
+        }
+      };
+      const [nutrition, body, workout] = await Promise.all([
+        readOptional("nutrition.csv"), readOptional("body.csv"), readOptional("workout-log.csv"),
+      ]);
+      const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+      return buildProgressSnapshot({ nutrition, body, workout }, today);
+    },
+  });
+
   const readTrainingFile = createTool({
     id: "read_training_file",
     description:
@@ -268,5 +291,5 @@ export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void
     },
   });
 
-  return { readTrainingFile, appendLogRows, appendNutrition, writeTrainingFile, updateRecords, updateProfileFile, appendMemory, correctLogRow };
+  return { readProgressSnapshot, readTrainingFile, appendLogRows, appendNutrition, writeTrainingFile, updateRecords, updateProfileFile, appendMemory, correctLogRow };
 }

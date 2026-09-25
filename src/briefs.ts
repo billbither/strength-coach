@@ -35,6 +35,10 @@ essay; strictly plain text — no markdown):
    classes). If today is Sunday, give the full weekly roll-up plus a body-composition trend from body.csv instead.
    If a nutrition target is defined and intake was logged yesterday, add a one-line protein/calorie read; label
    unconfirmed or partial days as "logged" rather than claiming that was all they consumed.
+5. GOAL ALIGNMENT — when recent nutrition, training, and repeated weigh-ins provide enough evidence, add one
+   concise adjustment to eating or training that moves the stated goal forward; use read_progress_snapshot to
+   check coverage and trends. If evidence is sparse, ask for the most useful missing log instead. Do not call a
+   single scale-muscle reading a trend or invent a calorie target.
 If I haven't weighed in for a while, gently prompt (don't nag). End with the closing ask coach-rules.md specifies
 for the brief if it defines one (e.g. asking for yesterday's snack tally); otherwise end by reminding me to just
 message you what I did and you'll log it. This is a read-only run: do NOT append or modify any files.

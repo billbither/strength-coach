@@ -3,6 +3,7 @@ import { reasonerModel } from "./models.js";
 import { readRepoFile, writeRepoFile } from "./github.js";
 import { sendTelegram } from "./telegram.js";
 import type { UserConfig } from "./users.js";
+import { buildProgressSnapshot } from "./progress.js";
 
 // The Sunday coach's letter: a weekly review on the reasoning model — accountability,
 // trends, and next week's focus. Distinct from the planner: this looks BACKWARD.
@@ -22,9 +23,14 @@ Write the letter with these sections (plain text, no markdown syntax — this go
    softening. If there was no prior letter, say this is week one and baselines start now.
 3. WHAT I SAW — 2-3 evidence-based observations from the log (patterns, wins worth celebrating, things sliding).
    PRs get real celebration. Sandbagging, skipped movements, or volume shortfalls get named plainly.
-4. NEXT WEEK — the single focus that matters most, and 1-3 concrete commitments with numbers and deadlines
+4. EATING AND TRAINING — connect logged protein/calories, multi-reading weight and scale-muscle trends, and
+   actual strength/session progress to the user's goal. Give one specific eating adjustment and one specific
+   training adjustment, each grounded in the data and the rulebook. If data are sparse, make the action a concrete
+   logging or measurement step. Do not infer a full-day calorie total from partial entries or invent a calorie target.
+   Treat single BIA muscle readings as noisy, not proof of muscle gain or loss.
+5. NEXT WEEK — the single focus that matters most, and 1-3 concrete commitments with numbers and deadlines
    ("100 pull-ups by Sunday", "log a weigh-in Wednesday morning fasted"). Make them binary — done or not done.
-5. One closing line in their coach's voice.
+6. One closing line in their coach's voice.
 
 Keep the whole letter under 40 lines. Never violate or encourage violating the safety rules in coach-rules.md —
 a strong voice pushes effort and consistency, never through pain or past RIR floors.`,
@@ -45,20 +51,25 @@ const SOURCE_FILES = [
 ] as const;
 
 export async function runWeeklyReview(user: UserConfig): Promise<string> {
-  const parts = await Promise.all(
+  const sourceEntries = await Promise.all(
     SOURCE_FILES.map(async (f) => {
       try {
-        return `===== ${f}${f === "coach-letter.md" ? " (LAST week's letter)" : ""} =====\n${(await readRepoFile(user.repo, f)).content}`;
+        return [f, (await readRepoFile(user.repo, f)).content] as const;
       } catch {
-        return `===== ${f} =====\n(file not present)`;
+        return [f, "(file not present)"] as const;
       }
     }),
   );
+  const sources = Object.fromEntries(sourceEntries) as Record<string, string>;
+  const parts = sourceEntries.map(([file, content]) => `===== ${file}${file === "coach-letter.md" ? " (LAST week's letter)" : ""} =====\n${content}`);
 
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
   const weekday = new Date().toLocaleDateString("en-US", { timeZone: "America/New_York", weekday: "long" });
+  const snapshot = buildProgressSnapshot({
+    nutrition: sources["nutrition.csv"], body: sources["body.csv"], workout: sources["workout-log.csv"],
+  }, today);
   const result = await reviewer.generate(
-    `Today is ${weekday} ${today}. Write this week's letter for ${user.name}.\n\n${parts.join("\n\n")}`,
+    `Today is ${weekday} ${today}. Write this week's letter for ${user.name}.\n\n${snapshot}\n\n${parts.join("\n\n")}`,
     { maxSteps: 1 },
   );
   const letter = result.text?.trim();

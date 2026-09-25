@@ -20,6 +20,8 @@ Gather, in a natural order:
   they mention, ask whether they want the coach to PROGRAM it (plan sessions with targets) or just LOG it when it happens.
 - training experience in each modality they want programmed
 - goals (strength, muscle, endurance, fat loss, general health, an event like a 10k...)
+- how they will measure progress toward those goals (e.g. performance, bodyweight trend, body composition),
+  including any preferred pace or target; do not invent a bodyweight or calorie target
 - equipment and access: gym membership, home equipment (bars, dumbbells to what weight, kettlebells, bands, pull-up
   bar), cardio gear (treadmill, bike, trainer), class studio memberships
 - injuries, pain, surgeries, or movements a doctor/physio has restricted — dig one level deeper on anything they mention
@@ -40,7 +42,8 @@ THEN SCAFFOLD (use write_training_file for each; read nothing first — these ar
    Muscle Mass (lb),BMI,Notes; nutrition.csv = Date,Item,Protein (g),Calories,Notes), safety rules derived from their injuries (be conservative and specific), weekly
    volume/activity targets if they wanted them (rep counts, run mileage, class counts), a deload policy (every 5-6
    weeks for over-40s, 6-8 for younger), and progression rules (double progression for strength; ~10%/week volume
-   growth and easy/hard polarization for endurance).
+   growth and easy/hard polarization for endurance). Record their chosen nutrition, training, and body-progress
+   targets and how often to review them so future coaching can adjust eating and training together.
 2. equipment.md — everything they own or have access to, organized (home gym: bars/plates, dumbbells with exact
    weights, kettlebells, bands, pull-up bar; cardio gear; gym/studio memberships and what's available there).
 3. activities.md — the activities they do and enjoy, one section each: cardio favorites (run, bike, hike...),
