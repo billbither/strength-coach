@@ -12,7 +12,9 @@ test("sends an image to DeepSeek Flash and parses a clarification request", asyn
   globalThis.fetch = async (_url, init) => {
     const body = JSON.parse(String(init?.body));
     assert.equal(body.model, "deepseek-flash");
+    assert.equal(body.thinking.type, "disabled");
     assert.equal(body.response_format.type, "json_object");
+    assert.equal(body.max_tokens, 2048);
     assert.match(body.messages[1].content[1].image_url.url, /^data:image\/jpeg;base64,/);
     assert.match(body.messages[1].content[0].text, /Caption: lunch/);
     return new Response(JSON.stringify({ choices: [{ finish_reason: "stop", message: { content: JSON.stringify({
@@ -24,6 +26,30 @@ test("sends an image to DeepSeek Flash and parses a clarification request", asyn
     const result = await estimateFoodPhoto(Buffer.from([0xff, 0xd8, 0xff, 0x00]), "lunch");
     assert.equal(result.question, "How much chicken was there?");
     assert.equal(result.cardVisible, false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("retries a truncated vision response with a larger output budget", async () => {
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async (_url, init) => {
+    calls++;
+    const body = JSON.parse(String(init?.body));
+    assert.equal(body.max_tokens, calls === 1 ? 2048 : 4096);
+    return new Response(JSON.stringify({ choices: [{
+      finish_reason: calls === 1 ? "length" : "stop",
+      message: { content: calls === 1 ? "" : JSON.stringify({
+        isFood: true, cardVisible: true, item: "Sandwich", proteinG: 30, calories: 500,
+        assumptions: "standard serving", question: null,
+      }) },
+    }] }), { status: 200 });
+  };
+  try {
+    const result = await estimateFoodPhoto(Buffer.from([0xff, 0xd8, 0xff, 0x00]));
+    assert.equal(calls, 2);
+    assert.equal(result.calories, 500);
   } finally {
     globalThis.fetch = originalFetch;
   }
