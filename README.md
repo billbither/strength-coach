@@ -23,6 +23,7 @@ The agent code (this repo) and your training data live in **two separate GitHub 
 | `snacks.csv` | Movement snacks (pull-ups between calls, etc.) |
 | `body.csv` | Weigh-ins and body composition — a wide schema with muscle mass, skeletal muscle, bone/protein/water mass, visceral fat, BMR, body age, and segmental muscle+fat per arm/leg/trunk |
 | `nutrition.csv` | Food and drink entries with protein grams and calories; daily totals are summed from logged entries |
+| `body-photos.csv` and `body-photos/` | Opt-in progress photo index, qualitative comparisons, and the original images |
 | `records.md` | Your PR board |
 | `memory.md` | Dated notes the coach saves from your conversations — travel, pain mentions, goals, life context — and reads back into coaching and nightly planning |
 | `coach-plan.md` | The forward plan, regenerated nightly |
@@ -118,6 +119,12 @@ Tell the coach what you ate, or give it a protein or calorie total. It records o
 
 You can also send a food photo or a food/drink label, with an optional caption describing ingredients or portions. The bot estimates protein and calories from the image or calculates them from visible nutrition facts. If a key detail is unclear, it asks one question and waits for your answer before logging. It suggests placing a credit card **face down** beside unpackaged food only when the portion's physical size is hard to judge; it does not suggest one for labels or packages. Estimates remain approximate, especially for hidden ingredients, cooking oil, and food outside the frame. Images are sent to DeepSeek Flash vision for analysis; the image itself is not saved in the data repo.
 
+### Body progress photos
+
+Send `/bodyphoto` and then a front, side, or back photo, or send the photo with the caption `body photo`. The first photo for each view is a baseline. Later photos are compared with the latest photo from the same view. Use similar pose, lighting, framing, and clothing for more useful comparisons. The bot describes visible differences cautiously; photos cannot measure muscle gain or body-fat change. The coach can use those observations alongside nutrition, training, and scale trends.
+
+Body photos are sent to DeepSeek Flash for analysis and saved in your private data repo under `body-photos/`; `body-photos.csv` records each photo and comparison. Because the repo uses Git, uploaded photos also remain in its commit history.
+
 Commands:
 
 | Command | What it does |
@@ -127,6 +134,7 @@ Commands:
 | `/plan` | Re-run the deep planner now and get a digest |
 | `/dashboard` | Send your live dashboard link |
 | `/progress` | Review logged nutrition, strength training, and weight/muscle trends against your goals; get specific eating and training actions |
+| `/bodyphoto` | Treat your next photo as a body progress photo and compare it with the latest matching view |
 | `/letter` | Get your weekly coach's review now (also arrives automatically Sunday 6 PM) |
 | `/init` | Enter setup mode (re-interview / rebuild data repo files); exits by itself once the files are written |
 | `/done` | Abandon setup mode manually (rarely needed — e.g. quitting a half-finished interview) |
@@ -182,6 +190,7 @@ Telegram ──webhook──▶ Hono server on Fly.io
                         ├─ onboarder agent (/init)       ├──▶ GitHub data repo (per user)
                         ├─ PDF → pdftotext → coach       │    (every log = a commit)
                         ├─ food photo → Flash vision     │
+                        ├─ body photo → Flash vision     │
                         ├─ cron 7:00 / 13:00  briefs     │
                         └─ cron 2:00  planner (deepseek-reasoner) ──▶ coach-plan.md
 ```

@@ -28,6 +28,8 @@ Write the letter with these sections (plain text, no markdown syntax — this go
    training adjustment, each grounded in the data and the rulebook. If data are sparse, make the action a concrete
    logging or measurement step. Do not infer a full-day calorie total from partial entries or invent a calorie target.
    Treat single BIA muscle readings as noisy, not proof of muscle gain or loss.
+   If body-photos.csv has a recent same-view comparison, use its qualitative observation as supporting context,
+   never as a measured change in muscle mass or body fat.
 5. NEXT WEEK — the single focus that matters most, and 1-3 concrete commitments with numbers and deadlines
    ("100 pull-ups by Sunday", "log a weigh-in Wednesday morning fasted"). Make them binary — done or not done.
 6. One closing line in their coach's voice.
@@ -44,6 +46,7 @@ const SOURCE_FILES = [
   "snacks.csv",
   "body.csv",
   "nutrition.csv",
+  "body-photos.csv",
   "records.md",
   "coach-plan.md",
   "memory.md",

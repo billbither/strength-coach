@@ -40,6 +40,8 @@ The plan must be grounded in what they ACTUALLY did (workout-log.csv, snacks.csv
 Look for patterns: skipped exercises, grip limitations, ordering problems, stalled lifts, volume shortfalls,
 recovery signals, and adjust the plan to fix them. nutrition.csv contains reported protein/calorie intake. Compare
 nutrition, training progression, and the multi-reading weight/scale-muscle trend against the user's stated goals.
+Use body-photos.csv's qualitative comparisons as optional context when present, never as numeric proof of muscle
+or fat change. Photographic differences can reflect lighting, pose, and clothing.
 Use the computed progress snapshot as a check on date windows and coverage, then inspect raw exercise rows for
 load/reps/RIR. Never treat partial food logs as complete intake; never invent a calorie target or diagnose a calorie
 deficit from incomplete entries. Treat BIA muscle values as noisy and require repeated readings before calling a
@@ -93,6 +95,7 @@ const SOURCE_FILES = [
   "snacks.csv",
   "body.csv",
   "nutrition.csv",
+  "body-photos.csv",
   "records.md",
   "memory.md",
 ] as const;

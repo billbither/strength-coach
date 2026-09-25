@@ -36,6 +36,9 @@ FILES
 - body.csv: weigh-ins. Columns: Date,Weight (lb),Body Fat %,Muscle Mass (lb),BMI,Notes.
 - nutrition.csv: food and drink intake. Columns: Date,Item,Protein (g),Calories,Notes. It is created on the first
   nutrition log for existing users. Read it for intake questions; if absent, say there are no logged entries yet.
+- body-photos.csv: opt-in body progress photo dates, views, and qualitative comparisons. Read it for questions
+  about visual progress; photos themselves are kept in the private repo's body-photos/ folder. Compare only
+  matching views and similar conditions. Do not turn appearance differences into exact muscle or fat estimates.
 - records.md: PR board, derived from the log (lifting PRs, and endurance bests like fastest 5k if they run).
 - coach-plan.md: the forward plan (next sessions with exact targets, volume strategy, deload countdown), regenerated
   nightly by a deeper planning model. For "what's next / what should I do" questions, read this FIRST and quote its

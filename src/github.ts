@@ -7,7 +7,24 @@ function headers() {
   };
 }
 
-const api = (repo: string, path: string) => `https://api.github.com/repos/${repo}/contents/${encodeURIComponent(path)}`;
+const api = (repo: string, path: string) => `https://api.github.com/repos/${repo}/contents/${path.split("/").map(encodeURIComponent).join("/")}`;
+
+export async function readRepoBinaryFile(repo: string, path: string): Promise<Buffer> {
+  const res = await fetch(api(repo, path), {
+    headers: { ...headers(), Accept: "application/vnd.github.raw+json" },
+  });
+  if (!res.ok) throw new Error(`GitHub read ${repo}/${path} failed: ${res.status} ${await res.text()}`);
+  return Buffer.from(await res.arrayBuffer());
+}
+
+export async function writeRepoBinaryFile(repo: string, path: string, content: Buffer, message: string): Promise<void> {
+  const res = await fetch(api(repo, path), {
+    method: "PUT",
+    headers: { ...headers(), "Content-Type": "application/json" },
+    body: JSON.stringify({ message, content: content.toString("base64") }),
+  });
+  if (!res.ok) throw new Error(`GitHub write ${repo}/${path} failed: ${res.status} ${await res.text()}`);
+}
 
 export async function readRepoFile(repo: string, path: string): Promise<{ content: string; sha: string }> {
   const res = await fetch(api(repo, path), { headers: headers() });

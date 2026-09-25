@@ -15,6 +15,7 @@ import { renderDashboard } from "./dashboard.js";
 import { runHealthCheck } from "./health.js";
 import { cardTip, estimateFoodPhoto, foodQuestion, type FoodEstimate } from "./food-photo.js";
 import { appendNutritionEntries } from "./nutrition.js";
+import { classifyBodyPhoto, compareBodyPhotos, latestPhoto, listBodyPhotos, readRepoBinaryFile, saveBodyPhoto } from "./body-photo.js";
 import { createHash } from "node:crypto";
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET!;
@@ -32,6 +33,7 @@ type UserSession = {
   scaffolded: Set<string>;
   replanTimer?: ReturnType<typeof setTimeout>;
   pendingFood?: PendingFood;
+  nextBodyPhoto?: boolean;
 };
 
 // Onboarding is complete once these files have actually been written — no /done needed.
@@ -119,12 +121,13 @@ app.post("/telegram/webhook", async (c) => {
     return c.json({ ok: true });
   }
 
+  const bodyPhoto = session.nextBodyPhoto || /\b(body|physique|progress)\s*(photo|picture|pic)\b|\b(photo|picture|pic)\s*(of\s+)?(my\s+)?(body|physique|progress)\b/i.test(msg.caption ?? "");
   const work = msg.document?.mime_type === "application/pdf"
     ? handlePdf(session, msg.document.file_id, msg.caption)
     : msg.document?.mime_type?.startsWith("image/")
-      ? handleFoodPhoto(session, msg.document.file_id, msg.caption)
+      ? bodyPhoto ? handleBodyPhoto(session, msg.document.file_id, msg.caption) : handleFoodPhoto(session, msg.document.file_id, msg.caption)
     : msg.photo?.length
-      ? handleFoodPhoto(session, msg.photo[msg.photo.length - 1].file_id, msg.caption)
+      ? bodyPhoto ? handleBodyPhoto(session, msg.photo[msg.photo.length - 1].file_id, msg.caption) : handleFoodPhoto(session, msg.photo[msg.photo.length - 1].file_id, msg.caption)
       : msg.text
         ? handleMessage(session, msg.text.trim())
         : Promise.resolve();
@@ -138,11 +141,41 @@ app.post("/telegram/webhook", async (c) => {
   return c.json({ ok: true });
 });
 
+async function handleBodyPhoto(s: UserSession, fileId: string, caption?: string) {
+  const image = await downloadTelegramFile(fileId);
+  const view = await classifyBodyPhoto(image, caption);
+  if (!view.bodyVisible || view.view === "other") {
+    await sendTelegram(s.config.chatId, `I couldn't determine a usable front, side, or back view: ${view.qualityNote}. Send a clear photo from one of those views.`);
+    return;
+  }
+  const date = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+  const prior = latestPhoto(await listBodyPhotos(s.config.repo), view.view);
+  let comparison = "Baseline photo; no earlier photo from this view yet.";
+  if (prior) {
+    const priorImage = await readRepoBinaryFile(s.config.repo, prior.path);
+    const result = await compareBodyPhotos(priorImage, image, view.view);
+    comparison = result.comparable
+      ? result.changes.length ? result.changes.slice(0, 3).join("; ") : "No clear visible change"
+      : "Comparison limited by photo conditions";
+    if (result.limitations.trim()) comparison += `; ${result.limitations.trim()}`;
+  }
+  const notes = [caption, view.qualityNote].filter(Boolean).join("; ");
+  await saveBodyPhoto(s.config.repo, date, image, view.view, comparison, notes);
+  s.nextBodyPhoto = false;
+  s.pendingFood = undefined;
+  const reply = prior
+    ? `Saved ${view.view} body photo. Compared with ${prior.date}: ${comparison}.\nPhotos show visible differences, not precise muscle or body-fat changes. Use the scale and training trends alongside them.`
+    : `Saved ${view.view} body photo as your baseline. Send the same view, pose, lighting, and clothing next time for a useful comparison.`;
+  remember(s, "user", `(sent a ${view.view} body progress photo)`);
+  remember(s, "assistant", reply);
+  await sendTelegram(s.config.chatId, reply);
+}
+
 async function finishFoodPhoto(s: UserSession, pending: PendingFood, estimate: FoodEstimate): Promise<void> {
   if (s.pendingFood !== pending) return; // a newer photo replaced this one
   if (!estimate.isFood) {
     s.pendingFood = undefined;
-    await sendTelegram(s.config.chatId, "I couldn't identify food in that photo. If it's a scale report, send the PDF export instead.");
+    await sendTelegram(s.config.chatId, "I couldn't identify food in that photo. For a body progress photo, resend it with the caption 'body photo' or send /bodyphoto first. For a scale report, send the PDF export.");
     return;
   }
   const question = foodQuestion(estimate);
@@ -256,10 +289,15 @@ async function handleMessage(s: UserSession, text: string) {
     await sendTelegram(s.config.chatId, `Your live dashboard: ${APP_URL}/dashboard/${dashboardToken(s.config.chatId)}`);
     return;
   }
+  if (text === "/bodyphoto") {
+    s.nextBodyPhoto = true;
+    await sendTelegram(s.config.chatId, "Send a front, side, or back body progress photo. I’ll save it in your private data repo and compare it with your previous photo from the same view. Use similar pose, lighting, and clothing each time.");
+    return;
+  }
   if (text === "/progress") {
     const result = await s.coach.generate(
       "Give me a read-only progress review against my goals. Call read_progress_snapshot; read coach-rules.md, " +
-      "workout-log.csv, and the relevant program/plan. Compare logged nutrition, multi-reading weight and scale " +
+      "workout-log.csv, body-photos.csv, and the relevant program/plan. Compare logged nutrition, multi-reading weight and scale " +
       "muscle trends, and actual strength progression. Give one specific eating adjustment and one specific " +
       "training adjustment with the evidence and a way to check each next week. If the data are too sparse, " +
       "make the action a concrete logging or measurement step. Do not modify files.",

@@ -4,6 +4,7 @@ import { readRepoFile, writeRepoFile } from "./github.js";
 import { normalizeRows } from "./normalize.js";
 import { NUTRITION_HEADER, appendNutritionEntries } from "./nutrition.js";
 import { buildProgressSnapshot } from "./progress.js";
+import { BODY_PHOTOS_HEADER } from "./body-photo.js";
 
 // Quote-aware CSV field counter — used to reject malformed rows before they corrupt a log.
 function csvFieldCount(row: string): number {
@@ -33,6 +34,7 @@ export const TRAINING_FILES = [
   "snacks.csv",
   "body.csv",
   "nutrition.csv",
+  "body-photos.csv",
   "records.md",
   "coach-plan.md",
   "memory.md",
@@ -74,6 +76,7 @@ export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void
       "classes, sports) and whether each is programmed or just logged; " +
       "workout-log.csv = full training history (lifting, runs, rides, classes); snacks.csv = movement-snack tally; " +
       "body.csv = weigh-ins; nutrition.csv = food and drink intake with protein grams and calories; " +
+      "body-photos.csv = dated views and qualitative comparisons of opt-in body progress photos; " +
       "records.md = PR board; coach-plan.md = the forward plan, regenerated nightly; " +
       "memory.md = dated notes of significant context from past conversations; " +
       "coach-letter.md = the most recent Sunday weekly-review letter with this week's commitments.",
@@ -85,8 +88,9 @@ export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void
         const { content } = await readRepoFile(repo, file);
         return content;
       } catch (error) {
-        if (file === "nutrition.csv" && error instanceof Error && error.message.includes("nutrition.csv failed: 404 ")) {
-          return `${NUTRITION_HEADER}\n`;
+        if (error instanceof Error && error.message.includes(`${file} failed: 404 `)) {
+          if (file === "nutrition.csv") return `${NUTRITION_HEADER}\n`;
+          if (file === "body-photos.csv") return `${BODY_PHOTOS_HEADER}\n`;
         }
         throw error;
       }
@@ -163,7 +167,7 @@ export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void
       "Used during onboarding to scaffold a new user's repo (coach-rules.md, strength-program.md, CSV headers, records.md). " +
       "For day-to-day logging use append_log_rows instead — this tool replaces the whole file.",
     inputSchema: z.object({
-      file: z.enum(TRAINING_FILES),
+      file: z.enum(TRAINING_FILES).refine((file) => file !== "body-photos.csv", "Body photo index is managed by photo uploads"),
       content: z.string().describe("The complete file content"),
       commitMessage: z.string().describe('e.g. "init: coaching rules" or "init: program"'),
     }),
