@@ -2,6 +2,7 @@ import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import { readRepoFile, writeRepoFile } from "./github.js";
 import { normalizeRows } from "./normalize.js";
+import { NUTRITION_HEADER, appendNutritionEntries } from "./nutrition.js";
 
 // Quote-aware CSV field counter — used to reject malformed rows before they corrupt a log.
 function csvFieldCount(row: string): number {
@@ -30,6 +31,7 @@ export const TRAINING_FILES = [
   "workout-log.csv",
   "snacks.csv",
   "body.csv",
+  "nutrition.csv",
   "records.md",
   "coach-plan.md",
   "memory.md",
@@ -48,15 +50,47 @@ export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void
       "equipment.md = available equipment and access; activities.md = activities they do/enjoy (cardio favorites, " +
       "classes, sports) and whether each is programmed or just logged; " +
       "workout-log.csv = full training history (lifting, runs, rides, classes); snacks.csv = movement-snack tally; " +
-      "body.csv = weigh-ins; records.md = PR board; coach-plan.md = the forward plan, regenerated nightly; " +
+      "body.csv = weigh-ins; nutrition.csv = food and drink intake with protein grams and calories; " +
+      "records.md = PR board; coach-plan.md = the forward plan, regenerated nightly; " +
       "memory.md = dated notes of significant context from past conversations; " +
       "coach-letter.md = the most recent Sunday weekly-review letter with this week's commitments.",
     inputSchema: z.object({
       file: z.enum(TRAINING_FILES),
     }),
     execute: async ({ file }) => {
-      const { content } = await readRepoFile(repo, file);
-      return content;
+      try {
+        const { content } = await readRepoFile(repo, file);
+        return content;
+      } catch (error) {
+        if (file === "nutrition.csv" && error instanceof Error && error.message.includes("nutrition.csv failed: 404 ")) {
+          return `${NUTRITION_HEADER}\n`;
+        }
+        throw error;
+      }
+    },
+  });
+
+  const appendNutrition = createTool({
+    id: "append_nutrition",
+    description:
+      "Log foods, drinks, meals, or a reported daily total to nutrition.csv. Each entry has an ISO date, " +
+      "item, protein grams and/or calories, and notes (mark estimates in notes). A missing nutrition.csv " +
+      "is created automatically. Do not invent quantities; ask if neither protein nor calories can be estimated. " +
+      "Use a daily-total row only when the user reports a total, not in addition to its component meals.",
+    inputSchema: z.object({
+      entries: z.array(z.object({
+        date: z.string(),
+        item: z.string(),
+        proteinG: z.number().optional(),
+        calories: z.number().optional(),
+        notes: z.string().optional(),
+      })).min(1),
+      commitMessage: z.string().describe('Commit message, e.g. "nutrition: 2026-09-24 lunch"'),
+    }),
+    execute: async ({ entries, commitMessage }) => {
+      const receipt = await appendNutritionEntries(repo, entries, commitMessage);
+      onLogAppend?.("nutrition.csv");
+      return receipt;
     },
   });
 
@@ -158,7 +192,7 @@ export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void
       "user notes it in chat instead. Pass the exact current row text and the corrected full row (or an empty " +
       "string to delete, e.g. a duplicate).",
     inputSchema: z.object({
-      file: z.enum(["workout-log.csv", "snacks.csv", "body.csv"]),
+      file: z.enum(["workout-log.csv", "snacks.csv", "body.csv", "nutrition.csv"]),
       currentRow: z.string().describe("The exact full text of the existing row to correct"),
       correctedRow: z.string().describe("The complete corrected row — or empty string to delete the row"),
       commitMessage: z.string().describe('e.g. "correct: 2026-07-13 bench was 3 sets not 4"'),
@@ -234,5 +268,5 @@ export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void
     },
   });
 
-  return { readTrainingFile, appendLogRows, writeTrainingFile, updateRecords, updateProfileFile, appendMemory, correctLogRow };
+  return { readTrainingFile, appendLogRows, appendNutrition, writeTrainingFile, updateRecords, updateProfileFile, appendMemory, correctLogRow };
 }

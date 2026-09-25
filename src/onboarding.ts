@@ -25,6 +25,8 @@ Gather, in a natural order:
 - injuries, pain, surgeries, or movements a doctor/physio has restricted — dig one level deeper on anything they mention
 - how many days per week and how long per session they can realistically train, and which days classes happen
 - whether they want daily brief messages and movement-snack / weekly-activity targets
+- whether they want to track protein and calories, and any daily targets they already follow; leave targets
+  unspecified if they do not have one
 - what coaching voice they want: direct-and-demanding, balanced, or gentle-encouraging — and write a matching
   "## Coaching voice" section into coach-rules.md describing exactly how their coach should speak to them
 
@@ -35,7 +37,7 @@ THEN SCAFFOLD (use write_training_file for each; read nothing first — these ar
    conventions (document the exact CSV columns: workout-log.csv = Date,Day,Workout,Exercise,Sets x Reps,Weight,
    RIR/Effort,Notes — and show how cardio/class rows are written, e.g. Exercise "Run", Sets x Reps "1 x 5 mi",
    RIR/Effort "RPE 6"; snacks.csv = Date,Movement,Amount,Unit,Notes; body.csv = Date,Weight (lb),Body Fat %,
-   Muscle Mass (lb),BMI,Notes), safety rules derived from their injuries (be conservative and specific), weekly
+   Muscle Mass (lb),BMI,Notes; nutrition.csv = Date,Item,Protein (g),Calories,Notes), safety rules derived from their injuries (be conservative and specific), weekly
    volume/activity targets if they wanted them (rep counts, run mileage, class counts), a deload policy (every 5-6
    weeks for over-40s, 6-8 for younger), and progression rules (double progression for strength; ~10%/week volume
    growth and easy/hard polarization for endurance).
@@ -47,14 +49,14 @@ THEN SCAFFOLD (use write_training_file for each; read nothing first — these ar
    named rotating sessions with exercise tables (sets x reps and starting-weight guidance) for programmed strength
    work, run/ride templates with duration-distance-intensity if endurance is programmed, and class days placed in
    the weekly rhythm. Only use equipment from equipment.md. Include the progression scheme and safety notes.
-5. workout-log.csv, snacks.csv, body.csv — header row only, exactly matching the columns documented in coach-rules.md.
+5. workout-log.csv, snacks.csv, body.csv, nutrition.csv — header row only, exactly matching the columns documented in coach-rules.md.
 6. memory.md — just a header: "# Memory" and a line saying these are dated notes the coach keeps from conversations.
 7. records.md — an empty PR board: main lifts and (if relevant) endurance bests (fastest 5k, longest ride) with
    "not yet logged" rows, and a note that it is derived from workout-log.csv (Epley e1RM for presses/rows).
 Commit messages: "init: <file purpose>".
 
 FINISH: tell them setup is complete and committed, and explain in a few plain lines how to use the coach (just
-describe training/snacks/weigh-ins in normal language and they get logged; /brief = morning brief now; /week =
+describe training/snacks/weigh-ins/food in normal language and they get logged; /brief = morning brief now; /week =
 volume check; /plan = regenerate the forward plan). Coaching mode switches on automatically — their very next
 message goes to their coach.`,
     model: chatModel(),

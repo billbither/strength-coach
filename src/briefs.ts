@@ -15,7 +15,7 @@ function todayLine(): string {
 
 const MORNING_PROMPT = () => `Good morning — today is ${todayLine()}. Build my daily check-in brief.
 Read coach-plan.md (the nightly forward plan — your primary source for today's session and targets), plus
-coach-rules.md, memory.md (recent context — travel, pain, schedule), workout-log.csv, snacks.csv, body.csv and records.md, then send a short, scannable brief (not an
+coach-rules.md, memory.md (recent context — travel, pain, schedule), workout-log.csv, snacks.csv, body.csv, nutrition.csv (if present) and records.md, then send a short, scannable brief (not an
 essay; strictly plain text — no markdown):
 
 0. LAYOFF CHECK — do this first, from the dates in workout-log.csv: how many days since my last logged session, and
@@ -33,6 +33,8 @@ essay; strictly plain text — no markdown):
 3. MOVEMENT SNACK — one easy snack for today (complementary to today's focus), never to failure.
 4. WEEKLY VOLUME — one-line week-to-date read of whatever targets coach-rules.md defines (rep volume, mileage,
    classes). If today is Sunday, give the full weekly roll-up plus a body-composition trend from body.csv instead.
+   If a nutrition target is defined and intake was logged yesterday, add a one-line protein/calorie read; label
+   unconfirmed or partial days as "logged" rather than claiming that was all they consumed.
 If I haven't weighed in for a while, gently prompt (don't nag). End with the closing ask coach-rules.md specifies
 for the brief if it defines one (e.g. asking for yesterday's snack tally); otherwise end by reminding me to just
 message you what I did and you'll log it. This is a read-only run: do NOT append or modify any files.

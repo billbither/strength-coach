@@ -145,10 +145,11 @@ async function tryRead(repo: string, file: string): Promise<string> {
 }
 
 export async function renderDashboard(user: UserConfig, weeksBack = 0): Promise<string> {
-  const [bodyCsv, logCsv, snacksCsv, records, plan] = await Promise.all([
+  const [bodyCsv, logCsv, snacksCsv, nutritionCsv, records, plan] = await Promise.all([
     tryRead(user.repo, "body.csv"),
     tryRead(user.repo, "workout-log.csv"),
     tryRead(user.repo, "snacks.csv"),
+    tryRead(user.repo, "nutrition.csv"),
     tryRead(user.repo, "records.md"),
     tryRead(user.repo, "coach-plan.md"),
   ]);
@@ -156,10 +157,24 @@ export async function renderDashboard(user: UserConfig, weeksBack = 0): Promise<
   const body = bodyCsv ? asObjects(parseCsv(bodyCsv)) : [];
   const log = logCsv ? asObjects(parseCsv(logCsv)) : [];
   const snacks = snacksCsv ? asObjects(parseCsv(snacksCsv)) : [];
+  const nutrition = nutritionCsv ? asObjects(parseCsv(nutritionCsv)) : [];
+
+  const dailyNutrition = new Map<string, { protein: number; calories: number; hasProtein: boolean; hasCalories: boolean }>();
+  for (const row of nutrition) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(row.Date ?? "")) continue;
+    const day = dailyNutrition.get(row.Date) ?? { protein: 0, calories: 0, hasProtein: false, hasCalories: false };
+    const protein = num(row["Protein (g)"]);
+    const calories = num(row.Calories);
+    if (protein !== null) { day.protein += protein; day.hasProtein = true; }
+    if (calories !== null) { day.calories += calories; day.hasCalories = true; }
+    dailyNutrition.set(row.Date, day);
+  }
+  const nutritionDays = [...dailyNutrition.entries()].sort(([a], [b]) => a.localeCompare(b));
+  const latestNutrition = nutritionDays.at(-1);
 
   // stat tiles
   const latest = body[body.length - 1];
-  const tiles = latest
+  const bodyTiles = latest
     ? [
         ["Weight", `${latest["Weight (lb)"]} lb`],
         ["Body fat", `${latest["Body Fat %"]}%`],
@@ -169,6 +184,10 @@ export async function renderDashboard(user: UserConfig, weeksBack = 0): Promise<
         .map(([k, v]) => `<div class="tile"><div class="tile-v">${esc(v)}</div><div class="tile-k">${esc(k)}</div></div>`)
         .join("")
     : `<p class="muted">No weigh-ins logged yet.</p>`;
+  const nutritionTiles = latestNutrition
+    ? `<div class="tile"><div class="tile-v">${latestNutrition[1].hasProtein ? `${Math.round(latestNutrition[1].protein)} g` : "—"}</div><div class="tile-k">Protein logged · ${esc(latestNutrition[0])}</div></div>` +
+      `<div class="tile"><div class="tile-v">${latestNutrition[1].hasCalories ? `${Math.round(latestNutrition[1].calories)} kcal` : "—"}</div><div class="tile-k">Calories logged · ${esc(latestNutrition[0])}</div></div>`
+    : "";
 
   // body comp series
   const S1 = "var(--s1)";
@@ -249,6 +268,11 @@ export async function renderDashboard(user: UserConfig, weeksBack = 0): Promise<
     return { label, value: total, tip: `${label} ${wkStart} to ${wkEnd}: ${total} reps` };
   });
   const vol = barChart(volume, S2, "");
+  const proteinChart = lineChart([{ name: "Protein", color: S2, pts: nutritionDays.flatMap(([date, day]) => day.hasProtein ? [{ x: date, y: Math.round(day.protein) }] : []) }], { unit: " g", height: 150 });
+  const calorieChart = lineChart([{ name: "Calories", color: S1, pts: nutritionDays.flatMap(([date, day]) => day.hasCalories ? [{ x: date, y: Math.round(day.calories) }] : []) }], { unit: " kcal", height: 150 });
+  const weekNutrition = nutritionDays.filter(([date]) => inWeek(date)).reverse().map(([date, day]) =>
+    `<tr><td>${esc(date)}</td><td>${day.hasProtein ? Math.round(day.protein) + " g" : "—"}</td><td>${day.hasCalories ? Math.round(day.calories) + " kcal" : "—"}</td></tr>`,
+  ).join("");
 
   // sessions in the selected week
   const recent = log
@@ -289,7 +313,14 @@ pre{background:var(--card);border:1px solid var(--line);border-radius:10px;paddi
 </style></head><body><div class="wrap">
 <h1>${esc(user.name)} — Training Dashboard</h1>
 <div class="sub">Live from ${esc(user.repo)} · generated ${new Date().toLocaleString("en-US", { timeZone: "America/New_York" })} ET</div>
-<div class="tiles">${tiles}</div>
+<div class="tiles">${bodyTiles}${nutritionTiles}</div>
+<h2>Nutrition</h2>
+<p class="muted">Daily totals from logged entries. Blank values mean no amount was reported; a partial day is not a full-day total.</p>
+<div class="grid2">
+  <div class="card"><h3>Protein logged by day (g)</h3>${proteinChart}</div>
+  <div class="card"><h3>Calories logged by day (kcal)</h3>${calorieChart}</div>
+</div>
+<div class="card" style="overflow-x:auto"><h3>Daily totals — week of ${wkStart}</h3>${weekNutrition ? `<table><thead><tr><th>Date</th><th>Protein</th><th>Calories</th></tr></thead><tbody>${weekNutrition}</tbody></table>` : '<p class="muted">No nutrition logged this week.</p>'}</div>
 <h2>Body composition</h2>
 <div class="grid2">
   <div class="card"><h3>Weight &amp; muscle mass (lb)</h3>${wm}</div>

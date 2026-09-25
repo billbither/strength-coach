@@ -37,7 +37,8 @@ from the rule's number, and never a weight×reps already completed. Only the har
 outrank the log, and even they set the effort for a set, not a cap on the next load.
 The plan must be grounded in what they ACTUALLY did (workout-log.csv, snacks.csv) — not the idealized program.
 Look for patterns: skipped exercises, grip limitations, ordering problems, stalled lifts, volume shortfalls,
-recovery signals, and adjust the plan to fix them. memory.md holds dated conversational context (travel, pain mentions, life events) — factor it in. Balance recovery ACROSS modalities (don't stack a hard run
+recovery signals, and adjust the plan to fix them. nutrition.csv contains reported protein/calorie intake; use it
+for fueling context when present, but never treat partial food logs as complete daily intake. memory.md holds dated conversational context (travel, pain mentions, life events) — factor it in. Balance recovery ACROSS modalities (don't stack a hard run
 against a heavy lower-body day). Body-composition trends (body.csv) inform recovery notes.
 
 Output format: ONLY the complete markdown content of coach-plan.md — no preamble, no code fences around the whole
@@ -81,6 +82,7 @@ const SOURCE_FILES = [
   "workout-log.csv",
   "snacks.csv",
   "body.csv",
+  "nutrition.csv",
   "records.md",
   "memory.md",
 ] as const;

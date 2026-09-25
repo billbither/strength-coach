@@ -13,12 +13,15 @@ import { runWeeklyReview } from "./weekly.js";
 import { loadUsers, type UserConfig } from "./users.js";
 import { renderDashboard } from "./dashboard.js";
 import { runHealthCheck } from "./health.js";
+import { estimateFoodPhoto, type FoodEstimate } from "./food-photo.js";
+import { appendNutritionEntries } from "./nutrition.js";
 import { createHash } from "node:crypto";
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET!;
 const APP_URL = process.env.APP_URL ?? (process.env.FLY_APP_NAME ? `https://${process.env.FLY_APP_NAME}.fly.dev` : "http://localhost:8080");
 
 type ChatMsg = { role: "user"; content: string } | { role: "assistant"; content: string };
+type PendingFood = { image: Buffer; date: string; caption?: string; answers: string[] };
 
 type UserSession = {
   config: UserConfig;
@@ -28,10 +31,11 @@ type UserSession = {
   onboarding: boolean;
   scaffolded: Set<string>;
   replanTimer?: ReturnType<typeof setTimeout>;
+  pendingFood?: PendingFood;
 };
 
 // Onboarding is complete once these files have actually been written — no /done needed.
-const SCAFFOLD_COMPLETE = ["coach-rules.md", "strength-program.md", "records.md"];
+const SCAFFOLD_COMPLETE = ["coach-rules.md", "strength-program.md", "records.md", "nutrition.csv"];
 
 const sessions = new Map<string, UserSession>();
 for (const config of loadUsers()) {
@@ -102,7 +106,7 @@ app.post("/telegram/webhook", async (c) => {
       text?: string;
       caption?: string;
       document?: { file_id: string; mime_type?: string; file_name?: string };
-      photo?: { file_id: string }[];
+      photo?: { file_id: string; width?: number; height?: number }[];
     };
   }>();
   const msg = update.message;
@@ -117,11 +121,10 @@ app.post("/telegram/webhook", async (c) => {
 
   const work = msg.document?.mime_type === "application/pdf"
     ? handlePdf(session, msg.document.file_id, msg.caption)
+    : msg.document?.mime_type?.startsWith("image/")
+      ? handleFoodPhoto(session, msg.document.file_id, msg.caption)
     : msg.photo?.length
-      ? sendTelegram(
-          session.config.chatId,
-          "I can't read photos yet — but if that's a scale report, export the PDF from the scale app and send that file instead. PDFs I can read and log.",
-        )
+      ? handleFoodPhoto(session, msg.photo[msg.photo.length - 1].file_id, msg.caption)
       : msg.text
         ? handleMessage(session, msg.text.trim())
         : Promise.resolve();
@@ -134,6 +137,67 @@ app.post("/telegram/webhook", async (c) => {
   });
   return c.json({ ok: true });
 });
+
+function cardTip(estimate: FoodEstimate): string {
+  return estimate.cardVisible ? "" : "\nFor a better portion estimate next time, place a credit card face down beside the food for scale.";
+}
+
+async function finishFoodPhoto(s: UserSession, pending: PendingFood, estimate: FoodEstimate): Promise<void> {
+  if (s.pendingFood !== pending) return; // a newer photo replaced this one
+  if (!estimate.isFood) {
+    s.pendingFood = undefined;
+    await sendTelegram(s.config.chatId, "I couldn't identify food in that photo. If it's a scale report, send the PDF export instead.");
+    return;
+  }
+  const question = estimate.question || (estimate.proteinG === null || estimate.calories === null
+    ? "What food and portion size did you have?" : null);
+  if (question) {
+    await sendTelegram(s.config.chatId, `${question}${cardTip(estimate)}\nNothing logged yet.`);
+    return;
+  }
+  const item = (estimate.item || "Food photo").replace(/\s+/g, " ").trim();
+  const assumptions = estimate.assumptions.replace(/\s+/g, " ").trim();
+  const notes = `Photo estimate${assumptions ? `; ${assumptions}` : ""}`;
+  const receipt = await appendNutritionEntries(s.config.repo, [{
+    date: pending.date,
+    item,
+    proteinG: estimate.proteinG!,
+    calories: estimate.calories!,
+    notes,
+  }], `nutrition: ${pending.date} food photo`);
+  s.pendingFood = undefined;
+  const reply = `${item}: about ${estimate.proteinG} g protein and ${estimate.calories} kcal.\n${receipt}` +
+    (assumptions ? `\nAssumed: ${assumptions}` : "") + cardTip(estimate);
+  remember(s, "user", `(sent a food photo${pending.caption ? `: ${pending.caption}` : ""}${pending.answers.length ? `; clarified: ${pending.answers.join("; ")}` : ""})`);
+  remember(s, "assistant", reply);
+  await sendTelegram(s.config.chatId, reply);
+}
+
+async function handleFoodPhoto(s: UserSession, fileId: string, caption?: string) {
+  const image = await downloadTelegramFile(fileId);
+  const date = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+  const pending: PendingFood = { image, date, caption, answers: [] };
+  s.pendingFood = pending;
+  try {
+    await finishFoodPhoto(s, pending, await estimateFoodPhoto(image, caption));
+  } catch (error) {
+    if (s.pendingFood === pending) s.pendingFood = undefined;
+    throw error;
+  }
+}
+
+async function handleFoodFollowup(s: UserSession, answer: string) {
+  const pending = s.pendingFood;
+  if (!pending) return;
+  if (/^(cancel|skip|never mind)$/i.test(answer.trim())) {
+    s.pendingFood = undefined;
+    await sendTelegram(s.config.chatId, "Food photo discarded. Nothing logged.");
+    return;
+  }
+  pending.answers.push(answer);
+  const estimate = await estimateFoodPhoto(pending.image, pending.caption, pending.answers);
+  await finishFoodPhoto(s, pending, estimate);
+}
 
 async function handlePdf(s: UserSession, fileId: string, caption?: string) {
   const pdf = await downloadTelegramFile(fileId);
@@ -165,6 +229,10 @@ async function handlePdf(s: UserSession, fileId: string, caption?: string) {
 }
 
 async function handleMessage(s: UserSession, text: string) {
+  if (s.pendingFood && !text.startsWith("/")) {
+    await handleFoodFollowup(s, text);
+    return;
+  }
   if (text === "/init") {
     s.onboarding = true;
     s.scaffolded.clear();

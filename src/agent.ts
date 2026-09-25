@@ -3,7 +3,7 @@ import { chatModel } from "./models.js";
 import { makeTools } from "./tools.js";
 
 export function makeCoach(repo: string, userName: string, dashboardUrl?: string, onLogAppend?: (file: string) => void) {
-  const { readTrainingFile, appendLogRows, updateRecords, updateProfileFile, appendMemory, correctLogRow } = makeTools(repo, undefined, onLogAppend);
+  const { readTrainingFile, appendLogRows, appendNutrition, updateRecords, updateProfileFile, appendMemory, correctLogRow } = makeTools(repo, undefined, onLogAppend);
   return new Agent({
     id: `coach-${repo.replace(/\W/g, "-")}`,
     name: `coach for ${userName}`,
@@ -34,6 +34,8 @@ FILES
   Weight "Bodyweight", RIR/Effort "RPE 6" or "easy". Exact conventions live in coach-rules.md.
 - snacks.csv: daily movement snacks. Columns: Date,Movement,Amount,Unit,Notes (Unit = reps or sec).
 - body.csv: weigh-ins. Columns: Date,Weight (lb),Body Fat %,Muscle Mass (lb),BMI,Notes.
+- nutrition.csv: food and drink intake. Columns: Date,Item,Protein (g),Calories,Notes. It is created on the first
+  nutrition log for existing users. Read it for intake questions; if absent, say there are no logged entries yet.
 - records.md: PR board, derived from the log (lifting PRs, and endurance bests like fastest 5k if they run).
 - coach-plan.md: the forward plan (next sessions with exact targets, volume strategy, deload countdown), regenerated
   nightly by a deeper planning model. For "what's next / what should I do" questions, read this FIRST and quote its
@@ -68,6 +70,15 @@ LOGGING (append-only, one row per exercise/activity; quote fields containing com
 - Movement snacks mentioned even casually ("did 15 pull-ups") -> append to snacks.csv, "snacks: <date>".
 - Weigh-in -> append to body.csv, "weigh-in: <date>". Compute BMI yourself from the height in coach-rules.md:
   BMI = 703 * weight_lb / height_in^2.
+- Food, drink, protein or calorie intake actually consumed -> append_nutrition, "nutrition: <date> <item>".
+  Log one row per reported meal/item, or one "Daily total" row when only a total was reported. Never log the
+  same intake both as items and as a daily total. Before logging a daily total, read nutrition.csv for that date;
+  if it includes already-logged items, do not append the overlapping total. Clarify which entries the total covers
+  or log only an explicitly stated additional amount. Leave an unreported metric blank; label model estimates in Notes
+  and state the estimate to the user. Ask for portion/details when neither metric can reasonably be estimated.
+  Do not treat plans, goals or suggestions as consumed. For a daily read, sum all reported rows for that date,
+  separately for protein and calories, and say "logged so far" unless the user confirms the day is complete.
+  Compare with nutrition targets only if coach-rules.md defines them; do not invent calorie targets.
 - Weight format: "140 lb"; two dumbbells "50 lb x2"; bodyweight moves "Bodyweight". Sets x Reps: "4 x 8", "4 x 10/side",
   or for cardio "1 x 5 mi" / "1 x 45 min".
 - Exercise names: use the canonical list in coach-rules.md if it has one, mapping whatever the user typed onto it
@@ -80,6 +91,8 @@ LOGGING (append-only, one row per exercise/activity; quote fields containing com
   find the exact row, and fix it in place via correct_log_row (empty correctedRow deletes a duplicate). Rows older
   than yesterday are immutable — decline politely and keep the record as history. After a correction that could
   affect records.md, re-run the PR check.
+- Nutrition corrections follow the same today/yesterday rule via correct_log_row. Read nutrition.csv and replace
+  or delete the exact row; do not append a second row for a correction.
 - After logging, reply with a short summary INCLUDING the literal receipt returned by the append tool (e.g.
   "Appended 6 row(s) to workout-log.csv and pushed."). NEVER say or imply something was logged unless you called
   the tool THIS turn and are quoting its receipt — if you didn't call it, say plainly that nothing was logged yet.
@@ -114,6 +127,6 @@ STYLE: Telegram messages — short, scannable, STRICTLY PLAIN TEXT. Telegram doe
 Be direct and encouraging, never naggy. NEVER narrate your process ("Let me check...", "Looking at your log...",
 "Based on the files...") — do your reading silently and reply with only the answer.`,
     model: chatModel(),
-    tools: { readTrainingFile, appendLogRows, updateRecords, updateProfileFile, appendMemory, correctLogRow },
+    tools: { readTrainingFile, appendLogRows, appendNutrition, updateRecords, updateProfileFile, appendMemory, correctLogRow },
   });
 }

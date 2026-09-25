@@ -22,6 +22,7 @@ The agent code (this repo) and your training data live in **two separate GitHub 
 | `workout-log.csv` | Every workout, one row per exercise |
 | `snacks.csv` | Movement snacks (pull-ups between calls, etc.) |
 | `body.csv` | Weigh-ins and body composition — a wide schema with muscle mass, skeletal muscle, bone/protein/water mass, visceral fat, BMR, body age, and segmental muscle+fat per arm/leg/trunk |
+| `nutrition.csv` | Food and drink entries with protein grams and calories; daily totals are summed from logged entries |
 | `records.md` | Your PR board |
 | `memory.md` | Dated notes the coach saves from your conversations — travel, pain mentions, goals, life context — and reads back into coaching and nightly planning |
 | `coach-plan.md` | The forward plan, regenerated nightly |
@@ -101,6 +102,7 @@ Just talk to it:
 - *"Did workout B today. Goblet squats 3x12 at 55, swings 4x25..."* → logged, committed, PRs checked, safety-audited
 - *"185.2 this morning, 14.1% body fat"* → logged with computed BMI
 - *"Knocked out 20 pushups between meetings"* → tallied toward your weekly volume
+- *"Lunch was a turkey sandwich, about 35 g protein and 500 calories"* → logged to `nutrition.csv`; the coach can total what you have logged today
 - *"What should I do tomorrow?"* → answered from the nightly plan and your real history
 - *"I bought 60 lb dumbbells"* → equipment.md updated; future programming uses them
 
@@ -108,7 +110,13 @@ Just talk to it:
 
 If your scale's app exports a PDF body-composition report (tested with the Oxiline Scale MD Pro), just **send the PDF to the bot** as a file. It extracts everything — weight, body fat %, muscle mass, skeletal muscle, BMR, visceral fat grade, body age, and segmental muscle/fat for each arm, each leg, and trunk — logs one row to `body.csv`, skips duplicates, and replies with a trend read (multi-entry trend, including per-segment muscle changes and left/right imbalance flags — not single-day noise). Workout data and body data live in strictly separate logs; both feed the coaching and the nightly plan.
 
-Photos/screenshots aren't supported (the model is text-only) — send the PDF export instead. Malformed rows can't corrupt the logs: every append is validated against the CSV header before it's committed.
+Food photos are supported. Scale screenshots still need a PDF export for the full body-composition mapping. Malformed rows can't corrupt the logs: every append is validated against the CSV header before it's committed.
+
+### Protein and calorie tracking
+
+Tell the coach what you ate, or give it a protein or calorie total. It records one row per meal/item in `nutrition.csv` (`Date,Item,Protein (g),Calories,Notes`). You can report either metric or both; missing values remain blank. When quantities are estimated, the notes mark them as estimates. Ask "how much protein and how many calories have I logged today?" for a sum of the recorded entries. The dashboard shows daily totals and trends. Existing users get `nutrition.csv` automatically on their first nutrition log. A day with unreported meals is a partial log, not a complete intake total.
+
+You can also send a food photo, with an optional caption describing ingredients or portions. The bot estimates protein and calories from the image. If a key detail is unclear, it asks one question and waits for your answer before logging. For a better size reference, place a credit card **face down** beside the food; the bot recommends this when no card is visible. Estimates remain approximate, especially for hidden ingredients, cooking oil, and food outside the frame. Food images are sent to DeepSeek Flash vision for analysis; the image itself is not saved in the data repo.
 
 Commands:
 
@@ -167,13 +175,14 @@ The webhook rejects any request without your `WEBHOOK_SECRET` (Telegram sends it
 
 ```
 Telegram ──webhook──▶ Hono server on Fly.io
-  (text + PDF docs)     ├─ coach agent (deepseek-chat) ──┐
+  (text + PDF + photos) ├─ coach agent (deepseek-chat) ──┐
                         ├─ onboarder agent (/init)       ├──▶ GitHub data repo (per user)
                         ├─ PDF → pdftotext → coach       │    (every log = a commit)
+                        ├─ food photo → Flash vision     │
                         ├─ cron 7:00 / 13:00  briefs     │
                         └─ cron 2:00  planner (deepseek-reasoner) ──▶ coach-plan.md
 ```
 
-PDF parsing uses poppler's `pdftotext` (installed in the Docker image).
+PDF parsing uses poppler's `pdftotext` (installed in the Docker image). Food photos use `deepseek-flash` through the DeepSeek vision API; `DEEPSEEK_VISION_MODEL` can override that model name.
 
 Replies are plain text by design — Telegram doesn't render markdown, and a stripper in `src/telegram.ts` catches what the model leaks despite instructions (tested: instructions alone aren't enough).
