@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { imageMime } from "./food-photo.js";
-import { appendRepoFile, readRepoBinaryFile, readRepoFile, writeRepoBinaryFile, writeRepoFile } from "./github.js";
+import { readRepoBinaryFile, readRepoFile, saveBodyPhotoRecord } from "./storage.js";
 import { csvObjects } from "./progress.js";
 
 export const BODY_PHOTOS_HEADER = "Date,View,Path,Comparison,Notes";
@@ -107,25 +107,9 @@ export async function saveBodyPhoto(repo: string, date: string, image: Buffer, v
   if (image.length > 8 * 1024 * 1024) throw new Error("Body photo is too large. Send a compressed Telegram photo under 8 MB.");
   const extension = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" }[mime];
   const path = `body-photos/${date}-${randomUUID()}.${extension}`;
-  await writeRepoBinaryFile(repo, path, image, `body-photo: ${date} ${view}`);
   const row = bodyPhotoRow({ date, view, path, comparison, notes });
-  for (let attempt = 0; attempt < 5; attempt++) {
-    try {
-      await appendRepoFile(repo, "body-photos.csv", [row], `body-photo: ${date} index`);
-      return path;
-    } catch (error) {
-      if (!(error instanceof Error) || !error.message.includes("body-photos.csv failed: 404 ")) throw error;
-    }
-    try {
-      await writeRepoFile(repo, "body-photos.csv", `${BODY_PHOTOS_HEADER}\n${row}\n`, undefined, `body-photo: ${date} index`);
-      return path;
-    } catch (error) {
-      if (!(error instanceof Error) || !/body-photos\.csv failed: (409|422) /.test(error.message) || attempt === 4) throw error;
-      // A concurrent commit or another first photo may have created the index. Re-read before appending.
-      await new Promise((resolve) => setTimeout(resolve, 200 * 2 ** attempt));
-    }
-  }
-  throw new Error("Body photo index could not be written after retries.");
+  saveBodyPhotoRecord(repo, path, image, row, BODY_PHOTOS_HEADER);
+  return path;
 }
 
 export { readRepoBinaryFile };

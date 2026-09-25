@@ -1,5 +1,5 @@
 import { marked } from "marked";
-import { readRepoFile } from "./github.js";
+import { readRepoFile } from "./storage.js";
 import type { UserConfig } from "./users.js";
 
 // ---------- data parsing ----------
@@ -312,7 +312,7 @@ pre{background:var(--card);border:1px solid var(--line);border-radius:10px;paddi
 .md strong{font-weight:600}.md code{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:0 4px;font-size:12.5px}#tip{position:fixed;display:none;background:var(--text);color:var(--surface);font-size:12px;padding:4px 9px;border-radius:6px;pointer-events:none;z-index:9}
 </style></head><body><div class="wrap">
 <h1>${esc(user.name)} — Training Dashboard</h1>
-<div class="sub">Live from ${esc(user.repo)} · generated ${new Date().toLocaleString("en-US", { timeZone: "America/New_York" })} ET</div>
+<div class="sub">Live from private storage · generated ${new Date().toLocaleString("en-US", { timeZone: "America/New_York" })} ET</div>
 <div class="tiles">${bodyTiles}${nutritionTiles}</div>
 <h2>Nutrition</h2>
 <p class="muted">Daily totals from logged entries. Blank values mean no amount was reported; a partial day is not a full-day total.</p>

@@ -8,7 +8,7 @@ export function makeOnboarder(repo: string, userName: string, onScaffoldWrite?: 
     id: `onboarder-${repo.replace(/\W/g, "-")}`,
     name: `onboarder for ${userName}`,
     instructions: `You are onboarding a new user of this Telegram training coach. Your job: interview them, then
-scaffold their GitHub data repo so the coach has everything it needs. The coach handles ALL kinds of training —
+scaffold their private SQLite data so the coach has everything it needs. The coach handles ALL kinds of training —
 strength, running, cycling, swimming, group classes (barre, yoga, pilates, CrossFit), sports — so learn their whole
 picture, not just lifting.
 
@@ -57,9 +57,9 @@ THEN SCAFFOLD (use write_training_file for each; read nothing first — these ar
 6. memory.md — just a header: "# Memory" and a line saying these are dated notes the coach keeps from conversations.
 7. records.md — an empty PR board: main lifts and (if relevant) endurance bests (fastest 5k, longest ride) with
    "not yet logged" rows, and a note that it is derived from workout-log.csv (Epley e1RM for presses/rows).
-Commit messages: "init: <file purpose>".
+Change notes: "init: <file purpose>".
 
-FINISH: tell them setup is complete and committed, and explain in a few plain lines how to use the coach (just
+FINISH: tell them setup is complete and saved, and explain in a few plain lines how to use the coach (just
 describe training/snacks/weigh-ins/food in normal language and they get logged; /brief = morning brief now; /week =
 volume check; /plan = regenerate the forward plan). Coaching mode switches on automatically — their very next
 message goes to their coach.`,

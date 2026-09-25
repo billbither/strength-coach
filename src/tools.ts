@@ -1,6 +1,6 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
-import { readRepoFile, writeRepoFile } from "./github.js";
+import { appendRepoFile, readRepoFile, writeRepoFile } from "./storage.js";
 import { normalizeRows } from "./normalize.js";
 import { NUTRITION_HEADER, appendNutritionEntries } from "./nutrition.js";
 import { buildProgressSnapshot } from "./progress.js";
@@ -41,9 +41,8 @@ export const TRAINING_FILES = [
   "coach-letter.md",
 ] as const;
 
-// Tools are created per user, bound to that user's data repo.
-// onScaffoldWrite (optional) is called with the filename whenever write_training_file commits a file —
-// the server uses it to detect when onboarding has finished scaffolding the repo.
+// Tools are created per user, bound to that user's SQLite namespace.
+// onScaffoldWrite is called when onboarding saves a file.
 export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void, onLogAppend?: (file: string) => void) {
   const readProgressSnapshot = createTool({
     id: "read_progress_snapshot",
@@ -70,7 +69,7 @@ export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void
   const readTrainingFile = createTool({
     id: "read_training_file",
     description:
-      "Read one of the training source-of-truth files from the user's data repo. " +
+      "Read one of the training source-of-truth files from the user's private SQLite data. " +
       "strength-program.md = the training program (all modalities); coach-rules.md = the coaching rulebook; " +
       "equipment.md = available equipment and access; activities.md = activities they do/enjoy (cardio favorites, " +
       "classes, sports) and whether each is programmed or just logged; " +
@@ -112,7 +111,7 @@ export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void
         calories: z.number().optional(),
         notes: z.string().optional(),
       })).min(1),
-      commitMessage: z.string().describe('Commit message, e.g. "nutrition: 2026-09-24 lunch"'),
+      commitMessage: z.string().describe('Change note, e.g. "nutrition: 2026-09-24 lunch"'),
     }),
     execute: async ({ entries, commitMessage }) => {
       const receipt = await appendNutritionEntries(repo, entries, commitMessage);
@@ -124,7 +123,7 @@ export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void
   const appendLogRows = createTool({
     id: "append_log_rows",
     description:
-      "Append one or more CSV rows to a training log file and commit+push (append-only; never rewrites existing rows). " +
+      "Append one or more CSV rows to a training log file in SQLite (append-only; never rewrites existing rows). " +
       "The exact column conventions are documented in coach-rules.md — follow them. Defaults: " +
       "workout-log.csv = Date,Day,Workout,Exercise,Sets x Reps,Weight,RIR/Effort,Notes (cardio/classes fit too, e.g. " +
       'Exercise "Run", Sets x Reps "1 x 5 mi", Weight "Bodyweight", RIR/Effort "RPE 6"). ' +
@@ -135,10 +134,10 @@ export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void
       rows: z.array(z.string()).min(1).describe("Complete CSV rows, no header, no trailing newline"),
       commitMessage: z
         .string()
-        .describe('Commit message, e.g. "log: 2026-07-08 Builder C" or "snacks: 2026-07-08" or "weigh-in: 2026-07-08"'),
+        .describe('Change note, e.g. "log: 2026-07-08 Builder C" or "snacks: 2026-07-08" or "weigh-in: 2026-07-08"'),
     }),
     execute: async ({ file, rows: rawRows, commitMessage }) => {
-      const { content, sha } = await readRepoFile(repo, file);
+      const { content } = await readRepoFile(repo, file);
       const header = content.split("\n")[0];
       const expected = csvFieldCount(header);
       const { rows, changes } = normalizeRows(file, content, rawRows);
@@ -152,19 +151,18 @@ export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void
           );
         }
       }
-      const base = content.endsWith("\n") || content.length === 0 ? content : content + "\n";
-      await writeRepoFile(repo, file, base + rows.join("\n") + "\n", sha, commitMessage);
+      await appendRepoFile(repo, file, rows, commitMessage);
       onLogAppend?.(file);
       const note = changes.length ? ` Normalized names to match the log: ${changes.join(", ")}.` : "";
-      return `Appended ${rows.length} row(s) to ${file} and pushed.${note}`;
+      return `Saved ${rows.length} row(s) to ${file}.${note}`;
     },
   });
 
   const writeTrainingFile = createTool({
     id: "write_training_file",
     description:
-      "Create or completely overwrite one of the training files in the data repo and commit+push. " +
-      "Used during onboarding to scaffold a new user's repo (coach-rules.md, strength-program.md, CSV headers, records.md). " +
+      "Create or completely overwrite one of the training files in SQLite. " +
+      "Used during onboarding to scaffold a new user's data (coach-rules.md, strength-program.md, CSV headers, records.md). " +
       "For day-to-day logging use append_log_rows instead — this tool replaces the whole file.",
     inputSchema: z.object({
       file: z.enum(TRAINING_FILES).refine((file) => file !== "body-photos.csv", "Body photo index is managed by photo uploads"),
@@ -180,7 +178,7 @@ export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void
       }
       await writeRepoFile(repo, file, content, sha, commitMessage);
       onScaffoldWrite?.(file);
-      return `${file} written and pushed.`;
+      return `${file} saved.`;
     },
   });
 
@@ -188,7 +186,7 @@ export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void
     id: "update_settings_file",
     description:
       "Overwrite equipment.md, activities.md, memory.md, strength-program.md or coach-rules.md with full content and " +
-      "commit+push. Equipment/activities: update freely when the user mentions changes ('bought 60 lb dumbbells'). " +
+      "save in SQLite. Equipment/activities: update freely when the user mentions changes ('bought 60 lb dumbbells'). " +
       "Program/rules: ONLY when the user explicitly asks for a program or rule change, and only AFTER you have " +
       "described the exact change back to them and they confirmed. Always read the current file first, apply the " +
       "minimal change, pass back the complete file.",
@@ -205,7 +203,7 @@ export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void
         // file may not exist yet
       }
       await writeRepoFile(repo, file, content, sha, commitMessage);
-      return `${file} updated and pushed.`;
+      return `${file} updated.`;
     },
   });
 
@@ -249,7 +247,7 @@ export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void
         lines.splice(hits[0].i, 1);
       }
       await writeRepoFile(repo, file, lines.join("\n"), sha, commitMessage);
-      return fixed ? `Row corrected in ${file} and pushed.` : `Row deleted from ${file} and pushed.`;
+      return fixed ? `Row corrected in ${file}.` : `Row deleted from ${file}.`;
     },
   });
 
@@ -282,7 +280,7 @@ export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void
   const updateRecords = createTool({
     id: "update_records",
     description:
-      "Overwrite records.md (the PR board) with new full markdown content and commit+push. " +
+      "Overwrite records.md (the PR board) with new full markdown content in SQLite. " +
       "Read records.md first, modify only the lines that changed, and pass back the complete file.",
     inputSchema: z.object({
       content: z.string().describe("The complete new records.md content"),
@@ -291,7 +289,7 @@ export function makeTools(repo: string, onScaffoldWrite?: (file: string) => void
     execute: async ({ content, commitMessage }) => {
       const { sha } = await readRepoFile(repo, "records.md");
       await writeRepoFile(repo, "records.md", content, sha, commitMessage);
-      return "records.md updated and pushed.";
+      return "records.md updated.";
     },
   });
 

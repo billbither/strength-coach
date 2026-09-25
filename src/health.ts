@@ -1,55 +1,18 @@
 import { sendTelegram } from "./telegram.js";
 import type { UserConfig } from "./users.js";
+import { checkStorage } from "./storage.js";
 
-// Credential failures are the silent killer: the agent catches a 401 from a tool,
-// replies "I couldn't read your files", and the job looks successful. So probe the
-// dependencies DIRECTLY rather than inferring health from job outcomes.
-
-const EXPIRY_WARN_DAYS = 7;
+// Probe storage and model dependencies directly instead of inferring health from job outcomes.
 
 export type HealthProblem = { severity: "broken" | "warning"; message: string };
 
-async function checkGitHub(users: UserConfig[]): Promise<HealthProblem[]> {
+async function checkDatabase(users: UserConfig[]): Promise<HealthProblem[]> {
   const problems: HealthProblem[] = [];
-  const headers = {
-    Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
-    Accept: "application/vnd.github+json",
-    "User-Agent": "strength-coach-agent",
-  };
-
   for (const u of users) {
-    let res: Response;
     try {
-      res = await fetch(`https://api.github.com/repos/${u.repo}`, { headers });
+      checkStorage(u.repo);
     } catch (e) {
-      problems.push({ severity: "broken", message: `GitHub unreachable for ${u.repo}: ${String(e).slice(0, 120)}` });
-      continue;
-    }
-    if (res.status === 401) {
-      problems.push({
-        severity: "broken",
-        message: `GitHub token rejected (401 Bad credentials). The coach cannot read or write ${u.repo}. Regenerate the token at github.com/settings/personal-access-tokens and update the GITHUB_TOKEN secret.`,
-      });
-      return problems; // one bad token breaks every repo; don't repeat it per user
-    }
-    if (!res.ok) {
-      problems.push({ severity: "broken", message: `GitHub ${res.status} on ${u.repo} — check token repo access.` });
-      continue;
-    }
-    // Fine-grained PATs report their own expiry on every response.
-    const exp = res.headers.get("github-authentication-token-expiration");
-    if (exp) {
-      const when = new Date(exp.replace(" UTC", "Z").replace(" ", "T"));
-      const days = Math.floor((when.getTime() - Date.now()) / 86_400_000);
-      if (!Number.isNaN(days) && days <= EXPIRY_WARN_DAYS) {
-        problems.push({
-          severity: days <= 0 ? "broken" : "warning",
-          message:
-            days <= 0
-              ? `GitHub token EXPIRED (${exp}). Regenerate it now.`
-              : `GitHub token expires in ${days} day${days === 1 ? "" : "s"} (${exp}). Regenerate it at github.com/settings/personal-access-tokens before it dies, then update the GITHUB_TOKEN secret.`,
-        });
-      }
+      problems.push({ severity: "broken", message: `SQLite unavailable for ${u.name}: ${String(e).slice(0, 150)}` });
     }
   }
   return problems;
@@ -80,7 +43,7 @@ async function checkModel(): Promise<HealthProblem[]> {
 }
 
 export async function runHealthCheck(users: UserConfig[], adminChatId: string, context: string): Promise<HealthProblem[]> {
-  const problems = [...(await checkGitHub(users)), ...(await checkModel())];
+  const problems = [...(await checkDatabase(users)), ...(await checkModel())];
   if (problems.length === 0) {
     console.log(`health check (${context}): all dependencies OK`);
     return problems;

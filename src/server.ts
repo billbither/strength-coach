@@ -17,6 +17,7 @@ import { cardTip, estimateFoodPhoto, foodQuestion, type FoodEstimate } from "./f
 import { appendNutritionEntries } from "./nutrition.js";
 import { classifyBodyPhoto, compareBodyPhotos, latestPhoto, listBodyPhotos, readRepoBinaryFile, saveBodyPhoto } from "./body-photo.js";
 import { createHash } from "node:crypto";
+import { ensureMigrated } from "./migration.js";
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET!;
 const APP_URL = process.env.APP_URL ?? (process.env.FLY_APP_NAME ? `https://${process.env.FLY_APP_NAME}.fly.dev` : "http://localhost:8080");
@@ -295,7 +296,7 @@ async function handleMessage(s: UserSession, text: string) {
   }
   if (text === "/health") {
     const problems = await runHealthCheck(allUsers(), s.config.chatId, "on demand");
-    if (!problems.length) await sendTelegram(s.config.chatId, "✅ All good — GitHub, model API, and repos reachable.");
+    if (!problems.length) await sendTelegram(s.config.chatId, "✅ All good — SQLite and the model API are healthy.");
     return;
   }
   if (text === "/dashboard") {
@@ -308,7 +309,7 @@ async function handleMessage(s: UserSession, text: string) {
       return;
     }
     s.nextBodyPhoto = true;
-    await sendTelegram(s.config.chatId, "Send a front, side, or back body progress photo. I’ll save it in your private data repo and compare it with your previous photo from the same view. Use similar pose, lighting, and clothing each time.");
+    await sendTelegram(s.config.chatId, "Send a front, side, or back body progress photo. I’ll save it privately and compare it with your previous photo from the same view. Use similar pose, lighting, and clothing each time.");
     return;
   }
   if (text === "/progress") {
@@ -344,7 +345,7 @@ async function handleMessage(s: UserSession, text: string) {
         "exact numbers), then one line each for the two sessions after, volume strategy, and watch items.",
       { maxSteps: 6 },
     );
-    await sendTelegram(s.config.chatId, finalText(summary, "Plan updated — committed to the repo."));
+    await sendTelegram(s.config.chatId, finalText(summary, "Plan updated and saved."));
     return;
   }
 
@@ -399,6 +400,8 @@ function forEachUser(label: string, fn: (s: UserSession) => Promise<unknown>) {
 // "missed execution" and SKIPPED (no briefs, no nightly plans). These are daily jobs; running
 // minutes late is always better than not at all.
 const cronOpts = { timezone: "America/New_York", missedExecutionTolerance: 15 * 60_000 };
+const allUsers = () => [...sessions.values()].map((s) => s.config);
+await ensureMigrated(allUsers());
 cron.schedule("0 7 * * *", forEachUser("morning brief", (s) => runBrief("morning", s.config, s.coach)), cronOpts);
 cron.schedule("0 13 * * *", forEachUser("snack nudge", (s) => runBrief("snack", s.config, s.coach)), cronOpts);
 cron.schedule("0 2 * * *", forEachUser("nightly planning", (s) => runNightlyPlanning(s.config)), cronOpts);
@@ -406,7 +409,6 @@ cron.schedule("0 18 * * 0", forEachUser("weekly review", (s) => runWeeklyReview(
 
 // Probe credentials directly every morning (before the 7am brief) and once at boot —
 // a dead token or retired model name announces itself instead of silently degrading.
-const allUsers = () => [...sessions.values()].map((s) => s.config);
 cron.schedule("30 6 * * *", () => runHealthCheck(allUsers(), ADMIN_CHAT_ID, "daily check").catch(() => {}), cronOpts);
 setTimeout(() => runHealthCheck(allUsers(), ADMIN_CHAT_ID, "startup").catch(() => {}), 10_000);
 

@@ -1,6 +1,6 @@
 export const NUTRITION_HEADER = "Date,Item,Protein (g),Calories,Notes";
 
-import { appendRepoFile, readRepoFile, writeRepoFile } from "./github.js";
+import { appendRepoFile, readRepoFile, writeRepoFile } from "./storage.js";
 
 export type NutritionEntry = {
   date: string;
@@ -49,5 +49,5 @@ export async function appendNutritionEntries(repo: string, entries: NutritionEnt
       await appendRepoFile(repo, "nutrition.csv", rows, commitMessage);
     }
   }
-  return `Appended ${rows.length} row(s) to nutrition.csv and pushed.`;
+  return `Saved ${rows.length} row(s) to nutrition.csv.`;
 }

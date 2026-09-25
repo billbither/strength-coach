@@ -1,6 +1,6 @@
 import { Agent } from "@mastra/core/agent";
 import { reasonerModel } from "./models.js";
-import { readRepoFile, writeRepoFile } from "./github.js";
+import { readRepoFile, writeRepoFile } from "./storage.js";
 import type { UserConfig } from "./users.js";
 import { buildProgressSnapshot } from "./progress.js";
 
@@ -106,7 +106,7 @@ export async function runNightlyPlanning(user: UserConfig): Promise<string> {
       try {
         return [f, (await readRepoFile(user.repo, f)).content] as const;
       } catch {
-        return [f, "(file not present in repo)"] as const;
+        return [f, "(file not present in SQLite)"] as const;
       }
     }),
   );

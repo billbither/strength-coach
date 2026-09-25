@@ -1,6 +1,6 @@
 type Row = Record<string, string>;
 
-// Parse quoted commas, escaped quotes, and quoted newlines in the repo's CSV logs.
+// Parse quoted commas, escaped quotes, and quoted newlines in the stored CSV logs.
 export function csvObjects(content: string): Row[] {
   const records: string[][] = [];
   let record: string[] = [];
@@ -106,7 +106,7 @@ export function buildProgressSnapshot(
   const priorWeek = [...sessions.keys()].filter((key) => inWindow(key.slice(0, 10), 13, 7)).length;
   const recentSessions = [...sessions.values()].sort().reverse().slice(0, 5);
 
-  return `PROGRESS SNAPSHOT (through ${today}; computed from repo logs)
+  return `PROGRESS SNAPSHOT (through ${today}; computed from stored logs)
 Nutrition, last 7 calendar days:${nutritionLines.length ? `\n${nutritionLines.join("\n")}` : " no entries"}
 All nutrition totals are logged amounts only; a missing meal or metric makes a day incomplete. Never infer actual daily intake or a calorie deficit from these totals alone.
 ${overlaps.length ? `Possible overlapping food entries: ${overlaps.join("; ")}. Ask whether these were separate servings before using the totals for advice.` : ""}

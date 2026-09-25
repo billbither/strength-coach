@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { bodyPhotoRow, classifyBodyPhoto, compareBodyPhotos, latestPhoto, saveBodyPhoto, type BodyPhotoRecord } from "./body-photo.js";
-import { readRepoBinaryFile, writeRepoBinaryFile } from "./github.js";
+import { bodyPhotoRow, classifyBodyPhoto, compareBodyPhotos, latestPhoto, listBodyPhotos, saveBodyPhoto, type BodyPhotoRecord } from "./body-photo.js";
+import { readRepoBinaryFile, readRepoFile, writeRepoFile } from "./storage.js";
 
 const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0x00]);
 
@@ -40,55 +40,20 @@ test("classifies a progress photo and compares two images in chronological order
   } finally { globalThis.fetch = originalFetch; }
 });
 
-test("stores and reads binary photos through the GitHub Contents API", async () => {
-  const originalFetch = globalThis.fetch;
-  let calls = 0;
-  globalThis.fetch = async (url, init) => {
-    assert.equal(url, "https://api.github.com/repos/owner/private-data/contents/body-photos/test.jpg");
-    if (calls++ === 0) {
-      assert.equal(init?.method, "PUT");
-      assert.equal(JSON.parse(String(init.body)).content, jpeg.toString("base64"));
-      return new Response("{}", { status: 201 });
-    }
-    assert.equal((init?.headers as Record<string, string>).Accept, "application/vnd.github.raw+json");
-    return new Response(jpeg, { status: 200 });
-  };
-  try {
-    await writeRepoBinaryFile("owner/private-data", "body-photos/test.jpg", jpeg, "photo");
-    assert.deepEqual(await readRepoBinaryFile("owner/private-data", "body-photos/test.jpg"), jpeg);
-    assert.equal(calls, 2);
-  } finally { globalThis.fetch = originalFetch; }
+test("saves a photo and its index atomically in SQLite", async () => {
+  const owner = "body-photo-test";
+  const path = await saveBodyPhoto(owner, "2026-09-25", jpeg, "front", "Baseline", "clear view");
+  assert.deepEqual(await readRepoBinaryFile(owner, path), jpeg);
+  const records = await listBodyPhotos(owner);
+  assert.equal(records.length, 1);
+  assert.equal(records[0].path, path);
+  const second = await saveBodyPhoto(owner, "2026-10-25", jpeg, "front", "Clearer outline", "same pose");
+  assert.equal(latestPhoto(await listBodyPhotos(owner), "front")?.path, second);
 });
 
-test("retries a binary photo upload after a concurrent GitHub commit", async () => {
-  const originalFetch = globalThis.fetch;
-  let calls = 0;
-  globalThis.fetch = async (_url, init) => {
-    assert.equal(init?.method, "PUT");
-    assert.equal(JSON.parse(String(init.body)).content, jpeg.toString("base64"));
-    return new Response(calls++ === 0 ? "repo HEAD changed" : "{}", { status: calls === 1 ? 409 : 201 });
-  };
-  try {
-    await writeRepoBinaryFile("owner/private-data", "body-photos/test.jpg", jpeg, "photo");
-    assert.equal(calls, 2);
-  } finally { globalThis.fetch = originalFetch; }
-});
-
-test("retries first-photo index creation after a concurrent GitHub commit", async () => {
-  const originalFetch = globalThis.fetch;
-  let indexWrites = 0;
-  globalThis.fetch = async (url, init) => {
-    const path = String(url);
-    if (path.includes("/contents/body-photos/")) return new Response("{}", { status: 201 });
-    assert.match(path, /\/contents\/body-photos\.csv$/);
-    if (init?.method !== "PUT") return new Response("not found", { status: 404 });
-    const body = JSON.parse(String(init.body));
-    assert.match(Buffer.from(body.content, "base64").toString("utf8"), /^Date,View,Path,Comparison,Notes\n/);
-    return new Response(indexWrites++ === 0 ? "repo HEAD changed" : "{}", { status: indexWrites === 1 ? 409 : 201 });
-  };
-  try {
-    const path = await saveBodyPhoto("owner/private-data", "2026-09-25", jpeg, "front", "Baseline", "clear view");
-    assert.match(path, /^body-photos\/2026-09-25-.+\.jpg$/);
-    assert.equal(indexWrites, 2);
-  } finally { globalThis.fetch = originalFetch; }
+test("rolls back the photo when the index header is invalid", async () => {
+  const owner = "body-photo-invalid-index";
+  await writeRepoFile(owner, "body-photos.csv", "wrong,header\n", undefined, "test");
+  await assert.rejects(saveBodyPhoto(owner, "2026-09-25", jpeg, "front", "Baseline", ""), /unexpected header/);
+  assert.equal((await readRepoFile(owner, "body-photos.csv")).content, "wrong,header\n");
 });

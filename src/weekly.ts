@@ -1,6 +1,6 @@
 import { Agent } from "@mastra/core/agent";
 import { reasonerModel } from "./models.js";
-import { readRepoFile, writeRepoFile } from "./github.js";
+import { readRepoFile, writeRepoFile } from "./storage.js";
 import { sendTelegram } from "./telegram.js";
 import type { UserConfig } from "./users.js";
 import { buildProgressSnapshot } from "./progress.js";
