@@ -13,7 +13,7 @@ import { runWeeklyReview } from "./weekly.js";
 import { loadUsers, type UserConfig } from "./users.js";
 import { renderDashboard } from "./dashboard.js";
 import { runHealthCheck } from "./health.js";
-import { estimateFoodPhoto, type FoodEstimate } from "./food-photo.js";
+import { cardTip, estimateFoodPhoto, foodQuestion, type FoodEstimate } from "./food-photo.js";
 import { appendNutritionEntries } from "./nutrition.js";
 import { createHash } from "node:crypto";
 
@@ -138,10 +138,6 @@ app.post("/telegram/webhook", async (c) => {
   return c.json({ ok: true });
 });
 
-function cardTip(estimate: FoodEstimate): string {
-  return estimate.cardVisible ? "" : "\nFor a better portion estimate next time, place a credit card face down beside the food for scale.";
-}
-
 async function finishFoodPhoto(s: UserSession, pending: PendingFood, estimate: FoodEstimate): Promise<void> {
   if (s.pendingFood !== pending) return; // a newer photo replaced this one
   if (!estimate.isFood) {
@@ -149,15 +145,14 @@ async function finishFoodPhoto(s: UserSession, pending: PendingFood, estimate: F
     await sendTelegram(s.config.chatId, "I couldn't identify food in that photo. If it's a scale report, send the PDF export instead.");
     return;
   }
-  const question = estimate.question || (estimate.proteinG === null || estimate.calories === null
-    ? "What food and portion size did you have?" : null);
+  const question = foodQuestion(estimate);
   if (question) {
     await sendTelegram(s.config.chatId, `${question}${cardTip(estimate)}\nNothing logged yet.`);
     return;
   }
   const item = (estimate.item || "Food photo").replace(/\s+/g, " ").trim();
   const assumptions = estimate.assumptions.replace(/\s+/g, " ").trim();
-  const notes = `Photo estimate${assumptions ? `; ${assumptions}` : ""}`;
+  const notes = `${estimate.isLabel ? "Food label photo" : "Photo estimate"}${assumptions ? `; ${assumptions}` : ""}`;
   const receipt = await appendNutritionEntries(s.config.repo, [{
     date: pending.date,
     item,
