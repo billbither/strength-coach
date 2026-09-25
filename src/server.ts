@@ -22,7 +22,7 @@ const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET!;
 const APP_URL = process.env.APP_URL ?? (process.env.FLY_APP_NAME ? `https://${process.env.FLY_APP_NAME}.fly.dev` : "http://localhost:8080");
 
 type ChatMsg = { role: "user"; content: string } | { role: "assistant"; content: string };
-type PendingFood = { image: Buffer; date: string; caption?: string; answers: string[] };
+type PendingFood = { image: Buffer; date: string; caption?: string; answers: string[]; awaitingBodyChoice?: boolean };
 
 type UserSession = {
   config: UserConfig;
@@ -121,7 +121,7 @@ app.post("/telegram/webhook", async (c) => {
     return c.json({ ok: true });
   }
 
-  const bodyPhoto = session.nextBodyPhoto || /\b(body|physique|progress)\s*(photo|picture|pic)\b|\b(photo|picture|pic)\s*(of\s+)?(my\s+)?(body|physique|progress)\b/i.test(msg.caption ?? "");
+  const bodyPhoto = session.nextBodyPhoto || /^\/bodyphoto\b/i.test(msg.caption ?? "") || /\b(body|physique|progress)\s*(photo|picture|pic)\b|\b(photo|picture|pic)\s*(of\s+)?(my\s+)?(body|physique|progress)\b/i.test(msg.caption ?? "");
   const work = msg.document?.mime_type === "application/pdf"
     ? handlePdf(session, msg.document.file_id, msg.caption)
     : msg.document?.mime_type?.startsWith("image/")
@@ -143,8 +143,13 @@ app.post("/telegram/webhook", async (c) => {
 
 async function handleBodyPhoto(s: UserSession, fileId: string, caption?: string) {
   const image = await downloadTelegramFile(fileId);
+  await handleBodyPhotoImage(s, image, caption);
+}
+
+async function handleBodyPhotoImage(s: UserSession, image: Buffer, caption?: string) {
   const view = await classifyBodyPhoto(image, caption);
   if (!view.bodyVisible || view.view === "other") {
+    if (s.pendingFood?.awaitingBodyChoice) s.pendingFood = undefined;
     await sendTelegram(s.config.chatId, `I couldn't determine a usable front, side, or back view: ${view.qualityNote}. Send a clear photo from one of those views.`);
     return;
   }
@@ -174,8 +179,8 @@ async function handleBodyPhoto(s: UserSession, fileId: string, caption?: string)
 async function finishFoodPhoto(s: UserSession, pending: PendingFood, estimate: FoodEstimate): Promise<void> {
   if (s.pendingFood !== pending) return; // a newer photo replaced this one
   if (!estimate.isFood) {
-    s.pendingFood = undefined;
-    await sendTelegram(s.config.chatId, "I couldn't identify food in that photo. For a body progress photo, resend it with the caption 'body photo' or send /bodyphoto first. For a scale report, send the PDF export.");
+    pending.awaitingBodyChoice = true;
+    await sendTelegram(s.config.chatId, "I couldn't identify food in that photo. If it's a body progress photo, reply 'body photo' and I'll save and compare it. Otherwise, send your next message as usual. For a scale report, send the PDF export.");
     return;
   }
   const question = foodQuestion(estimate);
@@ -257,6 +262,14 @@ async function handlePdf(s: UserSession, fileId: string, caption?: string) {
 }
 
 async function handleMessage(s: UserSession, text: string) {
+  if (s.pendingFood?.awaitingBodyChoice && !text.startsWith("/")) {
+    const pending = s.pendingFood;
+    if (/^(body photo|yes)$/i.test(text.trim())) {
+      await handleBodyPhotoImage(s, pending.image, pending.caption);
+      return;
+    }
+    s.pendingFood = undefined;
+  }
   if (s.pendingFood && !text.startsWith("/")) {
     await handleFoodFollowup(s, text);
     return;
@@ -290,6 +303,10 @@ async function handleMessage(s: UserSession, text: string) {
     return;
   }
   if (text === "/bodyphoto") {
+    if (s.pendingFood?.awaitingBodyChoice) {
+      await handleBodyPhotoImage(s, s.pendingFood.image, s.pendingFood.caption);
+      return;
+    }
     s.nextBodyPhoto = true;
     await sendTelegram(s.config.chatId, "Send a front, side, or back body progress photo. I’ll save it in your private data repo and compare it with your previous photo from the same view. Use similar pose, lighting, and clothing each time.");
     return;

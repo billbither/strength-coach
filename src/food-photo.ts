@@ -5,10 +5,10 @@ const FoodEstimateSchema = z.object({
   isLabel: z.boolean().default(false),
   cardVisible: z.boolean(),
   needsPortionScale: z.boolean().default(false),
-  item: z.string(),
+  item: z.string().nullish().transform((value) => value ?? ""),
   proteinG: z.number().nonnegative().nullable(),
   calories: z.number().nonnegative().nullable(),
-  assumptions: z.string(),
+  assumptions: z.string().nullish().transform((value) => value ?? ""),
   question: z.string().nullable(),
 });
 

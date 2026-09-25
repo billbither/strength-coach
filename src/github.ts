@@ -18,12 +18,21 @@ export async function readRepoBinaryFile(repo: string, path: string): Promise<Bu
 }
 
 export async function writeRepoBinaryFile(repo: string, path: string, content: Buffer, message: string): Promise<void> {
-  const res = await fetch(api(repo, path), {
-    method: "PUT",
-    headers: { ...headers(), "Content-Type": "application/json" },
-    body: JSON.stringify({ message, content: content.toString("base64") }),
-  });
-  if (!res.ok) throw new Error(`GitHub write ${repo}/${path} failed: ${res.status} ${await res.text()}`);
+  const body = JSON.stringify({ message, content: content.toString("base64") });
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const res = await fetch(api(repo, path), {
+      method: "PUT",
+      headers: { ...headers(), "Content-Type": "application/json" },
+      body,
+    });
+    if (res.ok) return;
+    if (res.status === 409 && attempt < 4) {
+      // Another bot operation advanced the repo HEAD while GitHub prepared this commit.
+      await new Promise((resolve) => setTimeout(resolve, 200 * 2 ** attempt));
+      continue;
+    }
+    throw new Error(`GitHub write ${repo}/${path} failed: ${res.status} ${await res.text()}`);
+  }
 }
 
 export async function readRepoFile(repo: string, path: string): Promise<{ content: string; sha: string }> {

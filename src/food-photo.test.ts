@@ -58,6 +58,23 @@ test("retries a truncated vision response with a larger output budget", async ()
   }
 });
 
+test("accepts null descriptions when a photo is not food", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(JSON.stringify({ choices: [{
+    finish_reason: "stop",
+    message: { content: JSON.stringify({
+      isFood: false, isLabel: false, cardVisible: false, needsPortionScale: false,
+      item: null, proteinG: null, calories: null, assumptions: null, question: null,
+    }) },
+  }] }), { status: 200 });
+  try {
+    const result = await estimateFoodPhoto(Buffer.from([0xff, 0xd8, 0xff, 0x00]));
+    assert.equal(result.isFood, false);
+    assert.equal(result.item, "");
+    assert.equal(result.assumptions, "");
+  } finally { globalThis.fetch = originalFetch; }
+});
+
 test("card is suggested only when physical portion size is uncertain, never for labels", () => {
   const base: FoodEstimate = {
     isFood: true, isLabel: false, cardVisible: false, needsPortionScale: false,

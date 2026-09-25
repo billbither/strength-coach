@@ -121,7 +121,7 @@ You can also send a food photo or a food/drink label, with an optional caption d
 
 ### Body progress photos
 
-Send `/bodyphoto` and then a front, side, or back photo, or send the photo with the caption `body photo`. The first photo for each view is a baseline. Later photos are compared with the latest photo from the same view. Use similar pose, lighting, framing, and clothing for more useful comparisons. The bot describes visible differences cautiously; photos cannot measure muscle gain or body-fat change. The coach can use those observations alongside nutrition, training, and scale trends.
+Send `/bodyphoto` and then a front, side, or back photo, or send the photo with the caption `body photo`. For an uncaptioned photo that is not food, the bot asks whether to save it as a body photo; reply `body photo` to confirm. The first photo for each view is a baseline. Later photos are compared with the latest photo from the same view. Use similar pose, lighting, framing, and clothing for more useful comparisons. The bot describes visible differences cautiously; photos cannot measure muscle gain or body-fat change. The coach can use those observations alongside nutrition, training, and scale trends.
 
 Body photos are sent to DeepSeek Flash for analysis and saved in your private data repo under `body-photos/`; `body-photos.csv` records each photo and comparison. Because the repo uses Git, uploaded photos also remain in its commit history.
 

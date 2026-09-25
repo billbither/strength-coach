@@ -109,17 +109,23 @@ export async function saveBodyPhoto(repo: string, date: string, image: Buffer, v
   const path = `body-photos/${date}-${randomUUID()}.${extension}`;
   await writeRepoBinaryFile(repo, path, image, `body-photo: ${date} ${view}`);
   const row = bodyPhotoRow({ date, view, path, comparison, notes });
-  try {
-    await appendRepoFile(repo, "body-photos.csv", [row], `body-photo: ${date} index`);
-  } catch (error) {
-    if (!(error instanceof Error) || !error.message.includes("body-photos.csv failed: 404 ")) throw error;
-    try { await writeRepoFile(repo, "body-photos.csv", `${BODY_PHOTOS_HEADER}\n${row}\n`, undefined, `body-photo: ${date} index`); }
-    catch (writeError) {
-      if (!(writeError instanceof Error) || !writeError.message.includes("body-photos.csv failed: 422 ")) throw writeError;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
       await appendRepoFile(repo, "body-photos.csv", [row], `body-photo: ${date} index`);
+      return path;
+    } catch (error) {
+      if (!(error instanceof Error) || !error.message.includes("body-photos.csv failed: 404 ")) throw error;
+    }
+    try {
+      await writeRepoFile(repo, "body-photos.csv", `${BODY_PHOTOS_HEADER}\n${row}\n`, undefined, `body-photo: ${date} index`);
+      return path;
+    } catch (error) {
+      if (!(error instanceof Error) || !/body-photos\.csv failed: (409|422) /.test(error.message) || attempt === 4) throw error;
+      // A concurrent commit or another first photo may have created the index. Re-read before appending.
+      await new Promise((resolve) => setTimeout(resolve, 200 * 2 ** attempt));
     }
   }
-  return path;
+  throw new Error("Body photo index could not be written after retries.");
 }
 
 export { readRepoBinaryFile };

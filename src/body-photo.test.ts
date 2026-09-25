@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { bodyPhotoRow, classifyBodyPhoto, compareBodyPhotos, latestPhoto, type BodyPhotoRecord } from "./body-photo.js";
+import { bodyPhotoRow, classifyBodyPhoto, compareBodyPhotos, latestPhoto, saveBodyPhoto, type BodyPhotoRecord } from "./body-photo.js";
 import { readRepoBinaryFile, writeRepoBinaryFile } from "./github.js";
 
 const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0x00]);
@@ -57,5 +57,38 @@ test("stores and reads binary photos through the GitHub Contents API", async () 
     await writeRepoBinaryFile("owner/private-data", "body-photos/test.jpg", jpeg, "photo");
     assert.deepEqual(await readRepoBinaryFile("owner/private-data", "body-photos/test.jpg"), jpeg);
     assert.equal(calls, 2);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test("retries a binary photo upload after a concurrent GitHub commit", async () => {
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async (_url, init) => {
+    assert.equal(init?.method, "PUT");
+    assert.equal(JSON.parse(String(init.body)).content, jpeg.toString("base64"));
+    return new Response(calls++ === 0 ? "repo HEAD changed" : "{}", { status: calls === 1 ? 409 : 201 });
+  };
+  try {
+    await writeRepoBinaryFile("owner/private-data", "body-photos/test.jpg", jpeg, "photo");
+    assert.equal(calls, 2);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test("retries first-photo index creation after a concurrent GitHub commit", async () => {
+  const originalFetch = globalThis.fetch;
+  let indexWrites = 0;
+  globalThis.fetch = async (url, init) => {
+    const path = String(url);
+    if (path.includes("/contents/body-photos/")) return new Response("{}", { status: 201 });
+    assert.match(path, /\/contents\/body-photos\.csv$/);
+    if (init?.method !== "PUT") return new Response("not found", { status: 404 });
+    const body = JSON.parse(String(init.body));
+    assert.match(Buffer.from(body.content, "base64").toString("utf8"), /^Date,View,Path,Comparison,Notes\n/);
+    return new Response(indexWrites++ === 0 ? "repo HEAD changed" : "{}", { status: indexWrites === 1 ? 409 : 201 });
+  };
+  try {
+    const path = await saveBodyPhoto("owner/private-data", "2026-09-25", jpeg, "front", "Baseline", "clear view");
+    assert.match(path, /^body-photos\/2026-09-25-.+\.jpg$/);
+    assert.equal(indexWrites, 2);
   } finally { globalThis.fetch = originalFetch; }
 });
